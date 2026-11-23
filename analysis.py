@@ -283,5 +283,15 @@ R["command_scatter"] = [[int(i), int(r.n), round(100 * r.arrest, 1), round(100 *
 R["noaction_2022"] = round(100 * df.noaction.mean(), 1)
 R["race_nyclu_style"] = {r: round(100 * (df.race == r).mean(), 1) for r in ["Black", "Hispanic", "White"]}
 
+
+# ---------- extra aggregates for the advanced charts (all from the sheet)
+daily = df.groupby(df.STOP_FRISK_DATE.dt.strftime("%Y-%m-%d")).size()
+R["daily"] = {k: int(v) for k, v in daily.items()}
+df["outcome3"] = np.where(df.arrest == 1, "Arrest", np.where(df.summons == 1, "Summons", "None"))
+fl = df.groupby(["race", "frisk", "outcome3"]).size().reset_index(name="n")
+R["flows"] = [[r.race, int(r.frisk), r.outcome3, int(r.n)] for r in fl.itertuples()]
+agedf = df[df.age.notna()]
+R["age_by_race"] = {r: {int(a): int(n) for a, n in agedf[agedf.race == r].age.value_counts().items()} for r in race_order[:5]}
+
 json.dump(R, open(out, "w"), separators=(",", ":"))
 print("ok", N, len(json.dumps(R)))

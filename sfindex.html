@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NYC Stop-and-Frisk 2022 · Data Story</title>
+<meta name="description" content="Interactive analysis of 15,102 NYPD stop, question and frisk encounters recorded in 2022.">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#6b6963;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  --bench:#a9a79f; --seq-lo:#cde2fb; --seq-hi:#104281; --on-fill:#fff; --on-yellow:#0b0b0b;
+  --callout:#fff6e0; --callout-b:#eda100;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#a19f98;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767;
+    --bench:#6f6d68; --seq-lo:#0d366b; --seq-hi:#86b6ef; --callout:#2a2414; --callout-b:#c98500;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#a19f98;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#0ca30c; --s7:#9085e9; --s8:#e66767;
+  --bench:#6f6d68; --seq-lo:#0d366b; --seq-hi:#86b6ef; --callout:#2a2414; --callout-b:#c98500;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--s1)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+header.hero{padding:40px 0 8px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:0 0 8px}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:0 0 12px;letter-spacing:-.02em}
+.lede{font-size:18px;color:var(--ink2);max-width:760px;margin:0}
+nav.toc{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--grid);margin-top:20px}
+nav.toc .wrap{display:flex;gap:6px;align-items:center;overflow-x:auto;padding-top:10px;padding-bottom:10px;scrollbar-width:thin}
+nav.toc a{flex:none;font-size:13px;color:var(--ink2);text-decoration:none;padding:4px 10px;border-radius:999px;border:1px solid var(--grid);background:var(--surface)}
+nav.toc a:hover{color:var(--ink);border-color:var(--axis)}
+#theme{flex:none;margin-left:auto;font:inherit;font-size:13px;color:var(--ink2);background:var(--surface);border:1px solid var(--grid);border-radius:999px;padding:4px 12px;cursor:pointer}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:28px 0}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.tile .n{font-size:34px;font-weight:650;line-height:1.1;letter-spacing:-.02em}
+.tile .t{font-size:14px;color:var(--ink2);margin-top:4px}
+section.q{padding:40px 0 8px;border-top:1px solid var(--grid);margin-top:24px}
+.qn{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+h2{font-size:clamp(22px,3.4vw,30px);line-height:1.2;margin:4px 0 12px;letter-spacing:-.01em}
+.prompt{font-size:14px;color:var(--ink2);border-left:3px solid var(--axis);padding:2px 0 2px 12px;margin:0 0 16px}
+.answer{font-size:17px;max-width:820px}
+.answer p{margin:0 0 12px}
+.answer b{font-weight:650}
+.grid{display:grid;gap:16px;margin:20px 0}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:800px){.g2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 16px 12px;min-width:0}
+.card h3{font-size:15px;margin:0 0 2px}
+.card .sub{font-size:13px;color:var(--ink2);margin:0 0 10px}
+.chart svg{display:block;overflow:visible}
+.card.wide .chart{max-width:720px;margin:0 auto}
+.chart text{font-family:inherit}
+.chart .lbl{font-size:13px;fill:var(--ink2)}
+.chart .val{font-size:13px;fill:var(--ink);font-weight:600}
+.chart .tick{font-size:12px;fill:var(--muted)}
+.chart .inlbl{font-size:12px;font-weight:600;fill:var(--on-fill);pointer-events:none}
+.chart .halo{paint-order:stroke;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink2);margin:0 0 8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+details.tbl{margin-top:8px;font-size:13px}
+details.tbl summary{cursor:pointer;color:var(--ink2);padding:4px 0}
+.tw{overflow-x:auto;max-height:320px;overflow-y:auto}
+.tw table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.tw th,.tw td{text-align:right;padding:4px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+.tw th:first-child,.tw td:first-child{text-align:left}
+.tw th{position:sticky;top:0;background:var(--surface);color:var(--ink2);font-weight:600}
+.callout{background:var(--callout);border:1px solid var(--callout-b);border-radius:10px;padding:12px 14px;font-size:15px;margin:16px 0;max-width:820px}
+.note{font-size:13px;color:var(--ink2);max-width:820px;margin:8px 0 0}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;line-height:1.4;padding:6px 9px;border-radius:6px;max-width:260px;opacity:0;transition:opacity .08s}
+footer{padding:36px 0 60px;border-top:1px solid var(--grid);margin-top:40px;font-size:14px;color:var(--ink2)}
+footer li{margin:4px 0}
+.legend-grad{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin-top:6px}
+.legend-grad span.bar{width:140px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--seq-lo),var(--seq-hi))}
+@media (max-width:600px){.chart{overflow-x:auto}.chart svg{min-width:470px}}
+@media print{nav.toc,#theme{display:none}}
+</style>
+</head>
+<body>
+<div id="tip" role="tooltip"></div>
+
+<header class="hero"><div class="wrap">
+  <p class="eyebrow">Data visualization project · NYPD Stop, Question &amp; Frisk · 2022</p>
+  <h1>Who gets stopped, where, and what happens next</h1>
+  <p class="lede">An analysis of all <b>15,102</b> stop-and-frisk encounters the NYPD recorded in 2022, organised around ten questions. Every chart has a data-table view, and benchmarks from outside the file (census populations, earlier years) are labelled as such.</p>
+  <div class="tiles">
+    <div class="tile"><div class="n">15,102</div><div class="t">recorded stops in 2022, up 69% from 8,947 in 2021</div></div>
+    <div class="tile"><div class="n">58.7%</div><div class="t">of people stopped were Black, vs. 20.2% of NYC residents</div></div>
+    <div class="tile"><div class="n">64.6%</div><div class="t">of stops ended with neither an arrest nor a summons</div></div>
+    <div class="tile"><div class="n">16.0%</div><div class="t">of stops recovered a weapon (7.9% a firearm)</div></div>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap">
+  <a href="#q1">1 Demographics</a><a href="#q2">2 Time</a><a href="#q3">3 Reasons</a><a href="#q4">4 Outcomes</a><a href="#q5">5 Location</a><a href="#q6">6 Weapons</a><a href="#q7">7 Repeats</a><a href="#q8">8 Age</a><a href="#q9">9 Officers</a><a href="#q10">10 History</a><a href="#notes">Notes</a>
+  <button id="theme" type="button" aria-label="Toggle light and dark theme">◐ Theme</button>
+</div></nav>
+
+<main class="wrap">
+
+<!-- Q1 -->
+<section class="q" id="q1">
+  <div class="qn">Question 1 · Demographic analysis</div>
+  <h2>Black New Yorkers are stopped at about 12 times the rate of white New Yorkers</h2>
+  <p class="prompt">What is the racial and gender distribution of people stopped and frisked in 2022? Are there disparities by race or gender?</p>
+  <div class="answer">
+    <p><b>Race.</b> 8,863 of the 15,102 stops (58.7%) involved a person recorded as Black, 4,477 (29.6%) Hispanic, 1,077 (7.1%) white, 320 (2.1%) Asian / Pacific Islander and 173 (1.1%) another group. Against 2020 Census populations, that is <b>4.99 stops per 1,000 Black residents</b>, 1.80 per 1,000 Hispanic residents and 0.40 per 1,000 white residents. White New Yorkers are 30.9% of the city but 7.1% of stops.</p>
+    <p><b>Gender.</b> 91.6% of stops were of men (13,829) and 7.5% of women (1,139). Women were a larger share of white stops (13.5%) than of Black (7.0%) or Hispanic (7.6%) stops.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card wide" style="grid-column:1/-1"><h3>Who was stopped: race and gender</h3><p class="sub">Tile area = number of stops. Darker shade = men, lighter shade = women within each group. Hover for counts.</p><div class="legend" id="lg1t"></div><div class="chart" id="c1t" data-label="Treemap of stops by race and gender"></div></div>
+    <div class="card"><h3>Share of stops vs. share of NYC residents</h3><p class="sub">Percent, by race / ethnicity</p><div class="legend" id="lg1"></div><div class="chart" id="c1a" data-label="Grouped bars comparing each group's share of stops to its share of NYC population"></div></div>
+    <div class="card"><h3>Stops per 1,000 residents</h3><p class="sub">2022 stops ÷ 2020 Census population of the group</p><div class="chart" id="c1b" data-label="Bar chart of stops per 1,000 residents by race"></div></div>
+  </div>
+  <p class="note">Race categories follow NYPD's coding. "Hispanic" combines <i>White Hispanic</i> (3,036) and <i>Black Hispanic</i> (1,441) so it lines up with the Census definition (Hispanic of any race); "Black", "White" and "Asian" are then non-Hispanic, as in the Census. 192 stops (1.3%) have no race recorded and 134 have no sex recorded. Disparity here means a gap between share of stops and share of residents; it does not by itself establish cause, since the file has no information on who was <i>present</i> at each place and time.</p>
+</section>
+
+<!-- Q2 -->
+<section class="q" id="q2">
+  <div class="qn">Question 2 · Temporal trends</div>
+  <h2>Stops peak in spring and in the late evening; December and early mornings are quietest</h2>
+  <p class="prompt">How did stop-and-frisk encounters change over 2022's months? Are there days of the week or times of day when stops are more common?</p>
+  <div class="answer">
+    <p><b>Months.</b> Activity was steady at roughly 1,100–1,170 stops in winter, rose to a spring plateau (March 1,437, April 1,460, May 1,471; about 48 per day in April), eased through summer, ticked up again in October (1,373) and fell to a low of <b>841 in December</b>, 27 stops per day versus 49 in April.</p>
+    <p><b>Days.</b> Wednesday was the busiest day (2,537 stops), then Saturday (2,416) and Thursday (2,308). Monday was the quietest (1,561).</p>
+    <p><b>Hours.</b> 42% of stops (6,343) happened between 6 pm and midnight, peaking at 10 pm (1,207). A second bump follows at midnight–1 am (1,149 and 888), and the trough is 6–7 am (about 130 per hour). After midnight, calendar Saturday and Sunday are busiest (757 and 604 stops between 12 and 5 am, i.e. Friday and Saturday nights, vs. about 280 on Mondays and Tuesdays).</p>
+  </div>
+  <div class="grid g2">
+    <div class="card wide" style="grid-column:1/-1"><h3>Every day of 2022</h3><p class="sub">Each square is one day (columns are weeks, rows are Mon–Sun); darker = more stops that day. Hover for the date and count.</p><div class="chart" id="c2cal" data-label="Calendar heatmap of stops per day in 2022"></div><div class="legend-grad"><span>fewer</span><span class="bar"></span><span>more</span></div></div>
+    <div class="card"><h3>Stops by day of week</h3><p class="sub">Count of stops</p><div class="chart" id="c2b" data-label="Column chart of stops per weekday"></div></div>
+    <div class="card"><h3>The 24-hour clock</h3><p class="sub">Stops by hour the stop began; 12 am at the top, running clockwise</p><div class="chart" id="c2clk" data-label="Polar chart of stops by hour of day"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Day × hour heatmap</h3><p class="sub">Darker = more stops. Note: after-midnight hours on "Saturday" are Friday night.</p><div class="chart" id="c2d" data-label="Heatmap of stops by weekday and hour"></div><div class="legend-grad"><span>fewer</span><span class="bar"></span><span>more</span></div></div>
+  </div>
+</section>
+
+<!-- Q3 -->
+<section class="q" id="q3">
+  <div class="qn">Question 3 · Reasons for stops</div>
+  <h2>Nearly half of stops cite a suspected weapon, and those stops rarely end in an arrest</h2>
+  <p class="prompt">What reasons do officers most often give? Is there a relationship between the stated reason and the outcome?</p>
+  <div class="answer">
+    <p><b>Suspected crime.</b> Criminal possession of a weapon (CPW) is the stated suspicion in 6,908 stops, <b>45.7%</b> of all stops. Robbery (1,544; 10.2%), petit larceny (1,336; 8.8%), assault (1,269; 8.4%) and burglary (1,077; 7.1%) follow; the top five reasons cover 80% of stops.</p>
+    <p><b>Observed circumstances.</b> On the form's checklist, officers most often cite "fits a description" (51.5% of stops), "proximity to a crime scene" (42.3%) and a suspected concealed weapon (33.5%).</p>
+    <p><b>Reason vs. outcome.</b> The reason strongly predicts what happens. Weapon-suspicion stops end in an arrest only 20.7% of the time (75.8% end with no arrest or summons) even though 87% involve a frisk. Property-crime stops have the opposite profile: petit larceny stops end in arrest 61.4% of the time and robbery stops 46.4%. Self-initiated stops are less likely to end in arrest (23.0%) than radio runs (38.9%) or stops on a victim's complaint at the scene (36.9%).</p>
+  </div>
+  <div class="grid g2">
+    <div class="card wide" style="grid-column:1/-1"><h3>Every suspected crime: volume, arrest rate and weapon recovery</h3><p class="sub">Each bubble is a reason cited (21 with 30+ stops). Right = more stops (log scale), higher = more often ended in arrest, bigger bubble = weapon found more often. Hover for details.</p><div class="chart" id="c3a" data-label="Bubble chart of suspected crime by number of stops, arrest rate and weapon found rate"></div></div>
+    <div class="card"><h3>Circumstances officers checked</h3><p class="sub">How often each applied, and how often it ended in arrest (more than one can apply)</p><div class="legend" id="lg3b"></div><div class="chart" id="c3b" data-label="Grouped bars of stop-basis share and arrest rate"></div></div>
+    <div class="card"><h3>Arrest rate by how the stop started</h3><p class="sub">Percent of stops ending in an arrest</p><div class="chart" id="c3d" data-label="Bar chart of arrest rate by stop initiation type"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Outcome by suspected crime</h3><p class="sub">Percent of stops in each category, top 8 reasons</p><div class="legend" id="lg3"></div><div class="chart" id="c3c" data-label="Stacked bars of outcome by suspected crime"></div></div>
+  </div>
+</section>
+
+<!-- Q4 -->
+<section class="q" id="q4">
+  <div class="qn">Question 4 · Outcomes of stops</div>
+  <h2>About one stop in three ends in an arrest; frisk rates, not arrest rates, are what differ by race</h2>
+  <p class="prompt">What percentage of stops end in arrests, summonses or other outcomes? Do outcomes differ by demographics?</p>
+  <div class="answer">
+    <p><b>Overall.</b> 33.0% of stops (4,985) ended in an arrest and 2.8% (420) in a summons (53 stops had both); <b>64.6% (9,750) ended with neither</b>. In 60% of stops the person was frisked and in 42% searched.</p>
+    <p><b>By race.</b> Arrest rates are close for Black (32.9%), Hispanic (32.5%) and Asian (35.3%) people, and somewhat higher for white people (37.7%). The big differences are in how the encounter went before that: <b>63.5% of Black</b> and 60.6% of Hispanic people stopped were frisked, versus <b>33.2% of white</b> people and 46.6% of Asian people. Summonses were issued in 3.0% of Black stops and 1.4% of white stops.</p>
+    <p><b>By gender.</b> Women were frisked far less often (35.5% vs. 61.9%) but arrested slightly more often (36.4% vs. 32.9%). A firearm was drawn in 4.6% of all stops, with little variation among the three largest groups (4.2–4.6%).</p>
+    <p>Arrest rates alone cannot show whether the bar for stopping people differs by group. What the file does show is that frisks, the more intrusive step, are applied unevenly even though weapon hit rates among those frisked are similar (see question 6).</p>
+  </div>
+  <div class="grid g2">
+    <div class="card wide" style="grid-column:1/-1"><h3>From who was stopped to how it ended</h3><p class="sub">Each band is a group of stops. Left: race. Middle: frisked or not. Right: outcome ("Arrest" includes the 53 stops that also had a summons). Hover a band for counts.</p><div class="chart" id="c4s" data-label="Sankey diagram from race to frisk to outcome"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Outcome of the stop, by group</h3><p class="sub">Percent of stops in each group</p><div class="legend" id="lg4"></div><div class="chart" id="c4a" data-label="Stacked bars of arrest, summons and no action by race and sex"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Frisk and search rates, by group</h3><p class="sub">Percent of stops in which the person was frisked / searched</p><div class="legend" id="lg4b"></div><div class="chart" id="c4b" data-label="Grouped bars of frisk and search rates by race and sex"></div></div>
+  </div>
+</section>
+
+<!-- Q5 -->
+<section class="q" id="q5">
+  <div class="qn">Question 5 · Location analysis</div>
+  <h2>The Bronx and Brooklyn account for 59% of stops; one Bronx precinct alone for 7.6%</h2>
+  <p class="prompt">Which neighbourhoods or precincts have the most stops? Is there a correlation between where stops occur and the demographics of the population?</p>
+  <div class="answer">
+    <p><b>Precincts.</b> Stops are recorded in all 77 precincts but are concentrated: the <b>46th Precinct (Bronx) logged 1,143</b>, more than double the next precinct (75th, Brooklyn: 502). Then the 48th (471), 40th (437) and 43rd (436), all in the Bronx. The top five precincts account for 19.8% of stops and the top fifteen for 40.7%.</p>
+    <p><b>Boroughs.</b> The Bronx (4,495 stops; 3.05 per 1,000 residents) and Brooklyn (4,465; 1.63) lead in count; relative to population, the Bronx is highest, followed by Manhattan (1.98), Brooklyn, Queens (0.98) and Staten Island (0.89).</p>
+    <p><b>Demographic correlation.</b> Across the five boroughs the stop rate rises with the Hispanic share of residents (r = +0.82) and Black share (r = +0.67) and falls with the white share (r = −0.61). With only five data points this is suggestive, not conclusive. Within every borough, Black residents are over-represented among those stopped: in Brooklyn they are 26.7% of residents but 68.6% of stops, in Manhattan 11.8% vs. 58.4%.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>Top 15 precincts by stops</h3><p class="sub">Count of stops, 2022</p><div class="chart" id="c5a" data-label="Bar chart of the top 15 precincts by number of stops"></div></div>
+    <div class="card"><h3>Who is stopped in those precincts</h3><p class="sub">Race / ethnicity mix of stops, percent</p><div class="legend" id="lg5"></div><div class="chart" id="c5b" data-label="Stacked bars of racial mix of stops in top precincts"></div></div>
+    <div class="card"><h3>Stops per 1,000 residents, by borough</h3><p class="sub">Stops ÷ 2020 Census population</p><div class="chart" id="c5c" data-label="Bar chart of stops per 1,000 residents by borough"></div></div>
+    <div class="card"><h3>Black share: residents vs. stops</h3><p class="sub">Percent, by borough</p><div class="legend" id="lg5d"></div><div class="chart" id="c5d" data-label="Grouped bars of Black share of residents and of stops by borough"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Where stops happened</h3><p class="sub">Each square is about 0.28 × 0.28 miles; darker = more stops (15,095 stops with usable coordinates). Hover for counts.</p><div class="chart" id="c5e" data-label="Density map of stop locations across New York City"></div><div class="legend-grad"><span>1 stop</span><span class="bar"></span><span>most</span></div></div>
+  </div>
+  <p class="note">The stop file has no precinct-level population data, so demographic benchmarks are at the borough level. A precinct-level comparison would need an outside table of precinct demographics.</p>
+</section>
+
+<!-- Q6 -->
+<section class="q" id="q6">
+  <div class="qn">Question 6 · Weapon and contraband discovery</div>
+  <h2>A weapon turned up in 1 of every 6 stops, and in 1 of every 5 frisks or searches</h2>
+  <p class="prompt">How often do officers find weapons or contraband? Is discovery connected to the reason for the stop?</p>
+  <div class="answer">
+    <p><b>Frequency.</b> A weapon was recovered in <b>2,411 stops (16.0%)</b>: a firearm in 1,187 (7.9%), a knife or cutting instrument in 1,083 (7.2%) and another weapon in 265 (1.8%). Other contraband was found in 875 stops (5.8%). Weapon or contraband together: 3,020 stops (20.0%). Among the 11,315 stops with a frisk or search, a weapon was found in 20.3%.</p>
+    <p><b>Link to reason.</b> Stops for suspected weapon possession are the most productive: a weapon was found in <b>24.4%</b> of them (firearm 15.0%) versus 8.8% of all other stops, and they account for 69.9% of all weapons recovered. Yet three in four (75.8%) still ended without an arrest or summons. Property-crime stops (petit larceny, burglary) yield weapons only 4–5% of the time but turn up other contraband more often (8–12%).</p>
+    <p><b>By race.</b> Among people who were frisked, a weapon was found in 20.9% of Black, 21.6% of Hispanic, 19.0% of white and 24.2% of Asian stops. The hit rates are similar even though frisk rates differ widely, which is the central tension in the data.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>What was found</h3><p class="sub">Percent of all 15,102 stops</p><div class="chart" id="c6a" data-label="Bar chart of the share of stops finding each weapon or contraband type"></div></div>
+    <div class="card"><h3>Weapon found, among people frisked</h3><p class="sub">Percent of frisked people, by race</p><div class="chart" id="c6b" data-label="Bar chart of weapon hit rate among frisked people by race"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Discovery rate by suspected crime</h3><p class="sub">Percent of stops in each category (top 8 reasons)</p><div class="legend" id="lg6"></div><div class="chart" id="c6c" data-label="Grouped bars of weapon, firearm and contraband discovery by suspected crime"></div></div>
+  </div>
+</section>
+
+<!-- Q7 -->
+<section class="q" id="q7">
+  <div class="qn">Question 7 · Repeat encounters</div>
+  <h2>This file cannot say how many people were stopped more than once</h2>
+  <p class="prompt">How many individuals were stopped multiple times in 2022? Are there patterns in the demographics or outcomes of repeat encounters?</p>
+  <div class="callout"><b>Not answerable directly.</b> The public file has one row per stop (<code>STOP_ID</code>) and no person identifier, so the same individual cannot be followed across stops. Anything below is an <b>indicative proxy only</b> and should not be quoted as a count of repeat stops.</div>
+  <div class="answer">
+    <p><b>Proxy.</b> Among 12,506 stops with a complete physical description (age, sex, race, height, weight, build, hair and eye colour), 10,404 distinct descriptions appear. <b>3,324 stops (26.6%)</b> share an identical description with at least one other 2022 stop; 802 descriptions occur twice, 215 three times, and the most repeated one 16 times. Many of these are surely different people who look alike on paper, and genuine repeat stops recorded with slightly different details would be missed, so the true figure could be higher or lower.</p>
+    <p><b>Pattern in the proxy.</b> Matching descriptions are concentrated among Black and Hispanic men: 33.7% of Black and 21.1% of Hispanic stops match another stop, versus 3.5% of white stops. Arrest rates are similar for matched and unmatched stops (33.4% vs. 36.6%). Only 68 descriptions recur on the same calendar day, the likelier duplicates of one encounter.</p>
+    <p><b>What would answer it.</b> A person-level identifier, even a pseudonymised one, would allow counting stops per person, the share stopped 2+ times and the outcome of each successive stop.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>Proxy: stops sharing a full description with another stop</h3><p class="sub">Percent of that group's described stops</p><div class="chart" id="c7a" data-label="Bar chart of the share of stops whose description matches another stop, by race"></div></div>
+    <div class="card"><h3>How often a description recurs</h3><p class="sub">Number of descriptions that appear n times (n ≥ 2)</p><div class="chart" id="c7b" data-label="Bar chart of how many descriptions recur 2 to 6 times"></div></div>
+  </div>
+</section>
+
+<!-- Q8 -->
+<section class="q" id="q8">
+  <div class="qn">Question 8 · Age and stop frequency</div>
+  <h2>Stops skew young: the median age is 26, and young people are stopped mainly on weapon suspicion</h2>
+  <p class="prompt">Is there a relationship between age and likelihood of being stopped? How do reasons differ by age group?</p>
+  <div class="answer">
+    <p><b>Distribution.</b> Of 13,379 stops with a plausible recorded age (1,723 have none), the median is 26; 43% of people stopped were under 25 and 14.7% under 18 (1,967 stops). Counts peak at age 20 (821 stops). Per capita, people under 18 are stopped at about 1.1 per 1,000 residents of that age group; for adults the figure is about 1.6 per 1,000 (counting only stops with a known age, so both are slight underestimates). Under-18s are 19.8% of NYC residents but 14.7% of stops with a known age.</p>
+    <p><b>Reasons by age.</b> Weapon suspicion dominates for the young: CPW is the stated reason for 51% of 15–17 year-olds and 60% of 18–24 year-olds, falling to 18% for people 55 and over. Older people are stopped mainly for property crimes: petit larceny is 22.5% of stops for 55+ versus 2.5% for 18–24 year-olds, and burglary rises from 4% to 14%. Robbery peaks for teenagers (20%).</p>
+    <p><b>Outcomes by age.</b> Frisk and weapon-recovery rates peak at ages 18–24 (72% frisked; 22% weapon found) and decline with age, while arrest rates rise from about 31% for 18–24 year-olds to 43% for people over 45.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card wide" style="grid-column:1/-1"><h3>Age profile of stops, by race</h3><p class="sub">Share of each group's stops (with a known age) at each age, lightly smoothed; the number under each name is the median age. Hover a ridge for exact values.</p><div class="chart" id="c8r" data-label="Ridgeline plot of age distribution of stops by race"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Outcomes by age group</h3><p class="sub">Percent of stops</p><div class="legend" id="lg8b"></div><div class="chart" id="c8c" data-label="Grouped bars of frisk, weapon found and arrest rate by age group"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Suspected crime by age group</h3><p class="sub">Percent of stops within each age group</p><div class="legend" id="lg8"></div><div class="chart" id="c8b" data-label="Stacked bars of suspected crime by age group"></div></div>
+  </div>
+</section>
+
+<!-- Q9 -->
+<section class="q" id="q9">
+  <div class="qn">Question 9 · Officer identification</div>
+  <h2>Individual officers aren't identified, but the busiest commands are, and outcomes vary widely between them</h2>
+  <p class="prompt">Which officers conducted the most stops? Do outcomes vary by officer?</p>
+  <div class="callout"><b>Not answerable at officer level.</b> The file contains the <i>command</i> of the issuing officer (199 distinct codes, many matching a precinct number) and the officer's <i>rank</i>, but no officer name or ID. The analysis below is therefore by command and by rank.</div>
+  <div class="answer">
+    <p><b>Most active commands.</b> Command 46 recorded 1,234 stops (8.2% of all), about three times the next command (75: 406). The ten busiest commands account for 26.2% of stops and the top fifteen for 33.7%. 82% of stops were issued by police officers of rank POM, 11% by POF, and 3% by sergeants.</p>
+    <p><b>Variation in outcomes.</b> Among the 88 commands with at least 50 stops, the arrest rate ranges from 11.3% to 67.6% (middle half: 27.2%–43.9%), the share of stops with no arrest or summons from 31.5% to 86.1%, and the weapon recovery rate from 3.1% to 69.8%. Command 46 has the most stops and the lowest arrest rate of any command with 50+ stops (11.3%; 86.1% end with no arrest or summons). By rank, outcomes are close: arrest rates are 28–35% for each rank with 100+ stops.</p>
+    <p>Differences between commands reflect in part what each area's stops are for (weapon-suspicion stops end in arrests less often), so they are a prompt for questions rather than a measure of individual officer behaviour.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>15 busiest commands</h3><p class="sub">Stops by issuing officer's command code</p><div class="chart" id="c9a" data-label="Bar chart of stops for the 15 busiest commands"></div></div>
+    <div class="card"><h3>Their outcomes</h3><p class="sub">Percent of that command's stops</p><div class="legend" id="lg9b"></div><div class="chart" id="c9b" data-label="Grouped bars of arrest and weapon recovery rates for the 15 busiest commands"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Every command with 30+ stops: volume vs. arrest rate</h3><p class="sub">Each dot is one command; x-axis is on a log scale. Hover for details.</p><div class="chart" id="c9c" data-label="Scatter plot of number of stops against arrest rate for each command"></div></div>
+  </div>
+</section>
+
+<!-- Q10 -->
+<section class="q" id="q10">
+  <div class="qn">Question 10 · Comparative analysis</div>
+  <h2>2022 is the highest year since 2015, but still about 2% of the 2011 peak</h2>
+  <p class="prompt">How does 2022 compare with previous years in overall numbers and demographics? Have practices or outcomes changed?</p>
+  <div class="callout"><b>Source note.</b> The 2022 file has no earlier years, so the 2011–2021 figures below come from NYCLU's published tables and the Data Collaborative for Justice's 2022 summary (linked in the notes). 2022 values are computed from this file. Racial groupings are assumed to match NYCLU's (Latinx = Hispanic incl. Black Hispanic).</div>
+  <div class="answer">
+    <p><b>Volume.</b> Stops fell from 685,724 in 2011 to 11,008 in 2018, rose to 13,459 in 2019, dropped to 9,544 in 2020 and 8,947 in 2021, then <b>jumped 69% to 15,102 in 2022</b>, the highest level since 2015. The Bronx doubled (2,368 to 4,495, +90%).</p>
+    <p><b>Demographics.</b> The Black share of stops was 53% in 2011 and 59–60% in 2019 and 2021; in 2022 it is 58.7%. Hispanic share (29.6%) is in the 27–31% range of recent years. The white share (7.1%) is the lowest on record in this series (8–12% in earlier years). The racial composition has thus been broadly stable for a decade while volume changed by a factor of 45.</p>
+    <p><b>Practice and outcomes.</b> The share of stops with no arrest or summons ("found innocent" in NYCLU's wording) fell from 88% in 2011 to 61% in 2021 as stops became rarer and more targeted, then rose to 64.6% in 2022. The mix shifted toward weapon-suspicion stops: CPW was 12% of stops in 2013, 37.5% in 2021 and <b>45.7% in 2022</b>, and 75.8% of CPW stops in 2022 ended with no arrest or summons (71.3% in 2021).</p>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>Stops per year, 2011–2022</h3><p class="sub">Recorded stops</p><div class="chart" id="c10a" data-label="Column chart of stops per year from 2011 to 2022"></div></div>
+    <div class="card"><h3>Zoom: 2016–2022</h3><p class="sub">Recorded stops</p><div class="chart" id="c10b" data-label="Column chart of stops per year from 2016 to 2022"></div></div>
+    <div class="card"><h3>Racial mix of stops</h3><p class="sub">Percent of stops by year</p><div class="legend" id="lg10"></div><div class="chart" id="c10c" data-label="Line chart of racial shares of stops by year"></div></div>
+    <div class="card"><h3>Stops with no arrest or summons</h3><p class="sub">Percent of stops by year</p><div class="chart" id="c10d" data-label="Line chart of the share of stops with no arrest or summons by year"></div></div>
+    <div class="card wide" style="grid-column:1/-1"><h3>Weapon-suspicion (CPW) share of stops</h3><p class="sub">Percent of stops citing criminal possession of a weapon. 2013 and 2021 from the Data Collaborative for Justice; 2022 from this file. Other years not available here.</p><div class="chart" id="c10e" data-label="Bar chart of CPW share of stops in 2013, 2021 and 2022"></div></div>
+  </div>
+</section>
+
+<footer id="notes"><div class="wrap" style="padding:0">
+  <h2 style="font-size:20px">Notes, definitions and limits</h2>
+  <ul>
+    <li><b>Data.</b> NYPD Stop, Question and Frisk file for calendar year 2022: 15,102 rows, one per stop, 82 columns. All figures are computed from the rows, with no sampling or weighting.</li>
+    <li><b>Outcome definitions.</b> <i>Arrest</i> = <code>SUSPECT_ARRESTED_FLAG</code>; <i>summons</i> = <code>SUMMONS_ISSUED_FLAG</code>; <i>no action</i> = neither. <i>Weapon found</i> = <code>WEAPON_FOUND_FLAG</code>; <i>contraband</i> = <code>OTHER_CONTRABAND_FLAG</code>.</li>
+    <li><b>Reported, not verified.</b> Race, age and sex are recorded by the officer. Stops not reported are not in the file, and a stop being recorded does not imply anything about its legality.</li>
+    <li><b>Disparity is not proof of cause.</b> Comparing stops to residents ignores who is present in a place, crime rates and police deployment. The charts show gaps; they do not isolate reasons for them.</li>
+    <li><b>Benchmarks.</b> Population: NYC Department of City Planning, 2020 Census (<a href="https://www.nyc.gov/assets/planning/download/pdf/planning-level/nyc-population/census2020/dcp_2020-census-briefing-booklet-1.pdf">briefing booklet</a>). Earlier-year counts and demographics: <a href="https://www.nyclu.org/data/stop-and-frisk-data">NYCLU stop-and-frisk data</a>. 2021–2022 comparisons and CPW shares: <a href="https://datacollaborativeforjustice.org/wp-content/uploads/2023/03/sqf_10_highlights-3.pdf">Data Collaborative for Justice, 10 Highlights from the 2022 Data</a>.</li>
+    <li><b>Reproduce.</b> <code>analysis.py</code> (included) reads the Excel file and regenerates every figure used on this page.</li>
+  </ul>
+</div></footer>
+
+<script>
+const D = {"N":15102,"race":[{"group":"Black","n":8863,"share":58.7,"pop_share":20.2,"per1000":4.99},{"group":"Hispanic","n":4477,"share":29.6,"pop_share":28.3,"per1000":1.8},{"group":"White","n":1077,"share":7.1,"pop_share":30.9,"per1000":0.4},{"group":"Asian / Pacific Islander","n":320,"share":2.1,"pop_share":15.6,"per1000":0.23},{"group":"Other","n":173,"share":1.1,"pop_share":5.0,"per1000":0.39},{"group":"Unknown","n":192,"share":1.3}],"race_detail":{"BLACK":8863,"WHITE HISPANIC":3036,"BLACK HISPANIC":1441,"WHITE":1077,"ASIAN / PACIFIC ISLANDER":320,"Unknown":192,"MIDDLE EASTERN/SOUTHWEST ASIAN":148,"AMERICAN INDIAN/ALASKAN NATIVE":25},"sex":[{"group":"Male","n":13829,"share":91.6},{"group":"Female","n":1139,"share":7.5},{"group":"Unknown","n":134,"share":0.9}],"race_sex":{"Black":{"Female":616,"Male":8225,"Unknown":22},"Hispanic":{"Female":342,"Male":4124,"Unknown":11},"White":{"Female":145,"Male":929,"Unknown":3},"Asian / Pacific Islander":{"Female":22,"Male":298,"Unknown":0},"Other":{"Female":6,"Male":166,"Unknown":1},"Unknown":{"Female":8,"Male":87,"Unknown":97}},"female_share_by_race":{"Black":7.0,"Hispanic":7.6,"White":13.5,"Asian / Pacific Islander":6.9,"Other":3.5,"Unknown":4.2},"month":[{"m":"Jan","n":1162,"perday":37.5},{"m":"Feb","n":1136,"perday":40.6},{"m":"Mar","n":1437,"perday":46.4},{"m":"Apr","n":1460,"perday":48.7},{"m":"May","n":1471,"perday":47.5},{"m":"Jun","n":1329,"perday":44.3},{"m":"Jul","n":1186,"perday":38.3},{"m":"Aug","n":1232,"perday":39.7},{"m":"Sep","n":1272,"perday":42.4},{"m":"Oct","n":1373,"perday":44.3},{"m":"Nov","n":1203,"perday":40.1},{"m":"Dec","n":841,"perday":27.1}],"weekday":[{"d":"Mon","n":1561},{"d":"Tue","n":2153},{"d":"Wed","n":2537},{"d":"Thu","n":2308},{"d":"Fri","n":2262},{"d":"Sat","n":2416},{"d":"Sun","n":1865}],"hour":[1149,888,593,475,335,223,132,136,312,296,298,365,390,506,501,523,763,874,891,1027,1048,1138,1207,1032],"heat_wd_hour":[[90,63,45,47,36,30,18,17,50,43,39,49,56,54,67,58,89,126,94,105,117,90,109,69],[69,77,56,41,31,17,19,25,32,44,42,55,62,89,87,90,121,131,144,156,186,188,211,180],[213,122,68,56,47,36,16,22,51,36,48,60,73,82,94,112,146,139,153,170,172,248,195,178],[195,146,78,69,42,24,24,12,40,48,57,60,70,76,57,95,153,145,154,159,155,129,191,129],[169,136,74,61,48,30,9,19,36,52,42,60,55,74,77,57,103,112,120,157,165,195,216,195],[232,192,156,104,73,44,16,28,55,39,36,39,45,72,65,55,82,109,111,163,151,170,186,193],[181,152,116,97,58,42,30,13,48,34,34,42,29,59,54,56,69,112,115,117,102,118,99,88]],"month_race_black_share":[58.7,57.0,58.0,59.7,56.5,57.7,60.1,59.8,61.2,59.9,59.6,55.1],"initiated":{"Radio Run":7783,"Self Initiated":5346,"C/W on Scene":1973},"time_buckets":{"Overnight (12\u20135am)":3663,"Morning (6\u201311am)":1539,"Afternoon (12\u20135pm)":3557,"Evening (6\u201311pm)":6343},"reasons":[{"reason":"Cpw","n":6908,"arrest":20.7,"summons":3.9,"noaction":75.8,"frisk":87.4,"search":39.4,"weapon":24.4,"firearm":15.0,"contraband":4.9,"anyfind":26.8},{"reason":"Robbery","n":1544,"arrest":46.4,"summons":0.8,"noaction":52.9,"frisk":50.8,"search":46.8,"weapon":15.6,"firearm":4.0,"contraband":5.0,"anyfind":18.8},{"reason":"Petit Larceny","n":1336,"arrest":61.4,"summons":0.6,"noaction":38.1,"frisk":19.2,"search":59.4,"weapon":3.9,"firearm":0.1,"contraband":11.8,"anyfind":14.9},{"reason":"Assault","n":1269,"arrest":40.4,"summons":1.4,"noaction":58.3,"frisk":39.0,"search":40.8,"weapon":8.7,"firearm":1.1,"contraband":2.1,"anyfind":10.5},{"reason":"Burglary","n":1077,"arrest":35.2,"summons":1.5,"noaction":63.4,"frisk":29.8,"search":36.4,"weapon":4.5,"firearm":0.4,"contraband":8.4,"anyfind":11.6},{"reason":"Other","n":557,"arrest":32.1,"summons":6.1,"noaction":62.3,"frisk":46.5,"search":38.8,"weapon":7.4,"firearm":2.5,"contraband":5.9,"anyfind":12.0},{"reason":"Grand Larceny","n":439,"arrest":50.6,"summons":0.9,"noaction":49.2,"frisk":19.1,"search":47.8,"weapon":5.9,"firearm":0.2,"contraband":7.3,"anyfind":12.3},{"reason":"Grand Larceny Auto","n":434,"arrest":29.5,"summons":3.9,"noaction":67.7,"frisk":39.9,"search":34.1,"weapon":6.0,"firearm":1.8,"contraband":2.8,"anyfind":8.5},{"reason":"Menacing","n":414,"arrest":41.8,"summons":2.7,"noaction":56.0,"frisk":69.6,"search":52.4,"weapon":25.4,"firearm":5.1,"contraband":2.9,"anyfind":26.3},{"reason":"Criminal Mischief","n":238,"arrest":45.4,"summons":1.7,"noaction":53.4,"frisk":24.4,"search":38.2,"weapon":6.3,"firearm":0.8,"contraband":2.5,"anyfind":8.4},{"reason":"Criminal Trespass","n":203,"arrest":37.9,"summons":7.9,"noaction":55.2,"frisk":14.3,"search":35.0,"weapon":4.4,"firearm":1.0,"contraband":7.4,"anyfind":10.3},{"reason":"Reckless Endangerment","n":168,"arrest":19.6,"summons":3.6,"noaction":77.4,"frisk":66.7,"search":32.7,"weapon":12.5,"firearm":8.3,"contraband":4.2,"anyfind":14.3},{"reason":"Cpsp","n":76,"arrest":38.2,"summons":0.0,"noaction":61.8,"frisk":26.3,"search":30.3,"weapon":0.0,"firearm":0.0,"contraband":6.6,"anyfind":6.6},{"reason":"Making Graffiti","n":75,"arrest":49.3,"summons":2.7,"noaction":49.3,"frisk":24.0,"search":44.0,"weapon":4.0,"firearm":0.0,"contraband":8.0,"anyfind":9.3},{"reason":"Auto Strippig","n":69,"arrest":40.6,"summons":1.4,"noaction":59.4,"frisk":27.5,"search":43.5,"weapon":5.8,"firearm":0.0,"contraband":5.8,"anyfind":10.1},{"reason":"Criminal Possession Of Controlled Substance","n":62,"arrest":30.6,"summons":4.8,"noaction":67.7,"frisk":40.3,"search":56.5,"weapon":9.7,"firearm":8.1,"contraband":22.6,"anyfind":27.4},{"reason":"Criminal Sale Of Controlled Substance","n":55,"arrest":47.3,"summons":0.0,"noaction":52.7,"frisk":38.2,"search":65.5,"weapon":1.8,"firearm":0.0,"contraband":54.5,"anyfind":54.5},{"reason":"Unauthorized Use Of A Vehicle","n":50,"arrest":46.0,"summons":0.0,"noaction":54.0,"frisk":22.0,"search":38.0,"weapon":4.0,"firearm":0.0,"contraband":8.0,"anyfind":12.0},{"reason":"Murder","n":37,"arrest":32.4,"summons":0.0,"noaction":67.6,"frisk":67.6,"search":48.6,"weapon":18.9,"firearm":10.8,"contraband":0.0,"anyfind":18.9},{"reason":"Forcible Touching","n":36,"arrest":55.6,"summons":0.0,"noaction":44.4,"frisk":19.4,"search":38.9,"weapon":8.3,"firearm":2.8,"contraband":5.6,"anyfind":8.3},{"reason":"Theft Of Services","n":14,"arrest":7.1,"summons":7.1,"noaction":85.7,"frisk":28.6,"search":21.4,"weapon":14.3,"firearm":7.1,"contraband":0.0,"anyfind":14.3},{"reason":"Rape","n":13,"arrest":61.5,"summons":0.0,"noaction":38.5,"frisk":23.1,"search":38.5,"weapon":7.7,"firearm":0.0,"contraband":0.0,"anyfind":7.7},{"reason":"Criminal Possession Of Forged Instrument","n":9,"arrest":0.0,"summons":0.0,"noaction":100.0,"frisk":66.7,"search":11.1,"weapon":0.0,"firearm":0.0,"contraband":11.1,"anyfind":11.1},{"reason":"Criminal Sale Of Marihuana","n":8,"arrest":12.5,"summons":0.0,"noaction":87.5,"frisk":75.0,"search":25.0,"weapon":25.0,"firearm":12.5,"contraband":37.5,"anyfind":62.5},{"reason":"Terrorism","n":6,"arrest":0.0,"summons":0.0,"noaction":100.0,"frisk":50.0,"search":33.3,"weapon":0.0,"firearm":0.0,"contraband":0.0,"anyfind":0.0},{"reason":"Criminal Possession Of Marihuana","n":5,"arrest":0.0,"summons":0.0,"noaction":100.0,"frisk":60.0,"search":0.0,"weapon":0.0,"firearm":0.0,"contraband":0.0,"anyfind":0.0}],"reasons_top":[{"reason":"Cpw","n":6908,"arrest":20.7,"summons":3.9,"noaction":75.8,"frisk":87.4,"search":39.4,"weapon":24.4,"firearm":15.0,"contraband":4.9,"anyfind":26.8},{"reason":"Robbery","n":1544,"arrest":46.4,"summons":0.8,"noaction":52.9,"frisk":50.8,"search":46.8,"weapon":15.6,"firearm":4.0,"contraband":5.0,"anyfind":18.8},{"reason":"Petit Larceny","n":1336,"arrest":61.4,"summons":0.6,"noaction":38.1,"frisk":19.2,"search":59.4,"weapon":3.9,"firearm":0.1,"contraband":11.8,"anyfind":14.9},{"reason":"Assault","n":1269,"arrest":40.4,"summons":1.4,"noaction":58.3,"frisk":39.0,"search":40.8,"weapon":8.7,"firearm":1.1,"contraband":2.1,"anyfind":10.5},{"reason":"Burglary","n":1077,"arrest":35.2,"summons":1.5,"noaction":63.4,"frisk":29.8,"search":36.4,"weapon":4.5,"firearm":0.4,"contraband":8.4,"anyfind":11.6},{"reason":"Other","n":557,"arrest":32.1,"summons":6.1,"noaction":62.3,"frisk":46.5,"search":38.8,"weapon":7.4,"firearm":2.5,"contraband":5.9,"anyfind":12.0},{"reason":"Grand Larceny","n":439,"arrest":50.6,"summons":0.9,"noaction":49.2,"frisk":19.1,"search":47.8,"weapon":5.9,"firearm":0.2,"contraband":7.3,"anyfind":12.3},{"reason":"Grand Larceny Auto","n":434,"arrest":29.5,"summons":3.9,"noaction":67.7,"frisk":39.9,"search":34.1,"weapon":6.0,"firearm":1.8,"contraband":2.8,"anyfind":8.5},{"reason":"Menacing","n":414,"arrest":41.8,"summons":2.7,"noaction":56.0,"frisk":69.6,"search":52.4,"weapon":25.4,"firearm":5.1,"contraband":2.9,"anyfind":26.3},{"reason":"Criminal Mischief","n":238,"arrest":45.4,"summons":1.7,"noaction":53.4,"frisk":24.4,"search":38.2,"weapon":6.3,"firearm":0.8,"contraband":2.5,"anyfind":8.4},{"reason":"Criminal Trespass","n":203,"arrest":37.9,"summons":7.9,"noaction":55.2,"frisk":14.3,"search":35.0,"weapon":4.4,"firearm":1.0,"contraband":7.4,"anyfind":10.3},{"reason":"Reckless Endangerment","n":168,"arrest":19.6,"summons":3.6,"noaction":77.4,"frisk":66.7,"search":32.7,"weapon":12.5,"firearm":8.3,"contraband":4.2,"anyfind":14.3}],"stop_basis":[{"reason":"Fits a description","n":7770,"arrest":43.2,"summons":1.8,"noaction":55.3,"frisk":49.6,"search":47.5,"weapon":11.6,"firearm":4.1,"contraband":5.8,"anyfind":16.2,"share":51.5},{"reason":"Proximity to crime scene","n":6390,"arrest":41.2,"summons":2.1,"noaction":56.9,"frisk":49.2,"search":46.2,"weapon":11.9,"firearm":4.4,"contraband":6.0,"anyfind":16.5,"share":42.3},{"reason":"Concealed weapon (suspected)","n":5056,"arrest":23.9,"summons":4.3,"noaction":72.3,"frisk":88.5,"search":42.4,"weapon":30.8,"firearm":18.6,"contraband":5.8,"anyfind":33.3,"share":33.5},{"reason":"Violent-crime background","n":3509,"arrest":37.3,"summons":2.8,"noaction":60.4,"frisk":97.4,"search":51.8,"weapon":18.6,"firearm":8.8,"contraband":4.8,"anyfind":21.5,"share":23.2},{"reason":"Other","n":3133,"arrest":25.2,"summons":4.3,"noaction":71.0,"frisk":53.0,"search":35.0,"weapon":10.6,"firearm":4.2,"contraband":5.3,"anyfind":14.7,"share":20.7},{"reason":"Known to carry weapon","n":656,"arrest":28.8,"summons":4.0,"noaction":67.5,"frisk":97.0,"search":44.8,"weapon":22.1,"firearm":10.7,"contraband":7.3,"anyfind":25.9,"share":4.3},{"reason":"Casing a location","n":470,"arrest":28.1,"summons":3.0,"noaction":69.6,"frisk":53.0,"search":38.3,"weapon":18.5,"firearm":8.5,"contraband":7.0,"anyfind":23.2,"share":3.1},{"reason":"Acting as lookout","n":157,"arrest":28.0,"summons":2.5,"noaction":70.1,"frisk":53.5,"search":36.9,"weapon":15.3,"firearm":9.6,"contraband":6.4,"anyfind":19.1,"share":1.0},{"reason":"Drug transaction","n":120,"arrest":32.5,"summons":3.3,"noaction":65.8,"frisk":56.7,"search":56.7,"weapon":10.8,"firearm":5.8,"contraband":35.8,"anyfind":43.3,"share":0.8},{"reason":"Fits crime pattern","n":100,"arrest":34.0,"summons":0.0,"noaction":66.0,"frisk":49.0,"search":41.0,"weapon":12.0,"firearm":7.0,"contraband":9.0,"anyfind":19.0,"share":0.7}],"initiation_outcomes":{"C/W on Scene":{"n":1973,"arrest":36.9,"summons":2.1,"noaction":61.2,"frisk":43.8,"search":43.1,"weapon":9.8,"firearm":3.8,"contraband":5.1,"anyfind":13.7},"Radio Run":{"n":7783,"arrest":38.9,"summons":1.9,"noaction":59.5,"frisk":51.3,"search":44.3,"weapon":11.4,"firearm":3.9,"contraband":4.8,"anyfind":15.1},"Self Initiated":{"n":5346,"arrest":23.0,"summons":4.4,"noaction":73.2,"frisk":78.7,"search":38.8,"weapon":24.9,"firearm":15.1,"contraband":7.5,"anyfind":29.4}},"explained":93.5,"overall":{"n":15102,"arrest":33.0,"summons":2.8,"noaction":64.6,"frisk":60.0,"search":42.2,"weapon":16.0,"firearm":7.9,"contraband":5.8,"anyfind":20.0},"outcome_mix":{"arrest_only":4932,"summons_only":367,"both":53,"none":9750},"by_race":{"Black":{"n":8863,"arrest":32.9,"summons":3.0,"noaction":64.4,"frisk":63.5,"search":41.9,"weapon":16.8,"firearm":9.5,"contraband":5.5,"anyfind":20.6},"Hispanic":{"n":4477,"arrest":32.5,"summons":2.8,"noaction":65.2,"frisk":60.6,"search":43.1,"weapon":16.3,"firearm":6.1,"contraband":6.4,"anyfind":20.7},"White":{"n":1077,"arrest":37.7,"summons":1.4,"noaction":61.0,"frisk":33.2,"search":44.1,"weapon":9.4,"firearm":2.2,"contraband":6.4,"anyfind":14.7},"Asian / Pacific Islander":{"n":320,"arrest":35.3,"summons":2.2,"noaction":62.5,"frisk":46.6,"search":41.9,"weapon":13.4,"firearm":5.6,"contraband":5.6,"anyfind":17.8},"Other":{"n":173,"arrest":28.9,"summons":0.6,"noaction":70.5,"frisk":45.7,"search":34.7,"weapon":9.2,"firearm":4.0,"contraband":1.7,"anyfind":10.4},"Unknown":{"n":192,"arrest":23.4,"summons":3.1,"noaction":74.0,"frisk":75.0,"search":32.3,"weapon":18.8,"firearm":10.9,"contraband":3.1,"anyfind":20.8}},"by_sex":{"Male":{"n":13829,"arrest":32.9,"summons":2.9,"noaction":64.6,"frisk":61.9,"search":42.6,"weapon":16.6,"firearm":8.2,"contraband":5.9,"anyfind":20.7},"Female":{"n":1139,"arrest":36.4,"summons":1.7,"noaction":62.2,"frisk":35.5,"search":39.2,"weapon":8.2,"firearm":3.4,"contraband":4.6,"anyfind":12.1}},"by_race_sex":{"Black|Male":{"n":8225,"arrest":32.6,"summons":3.1,"noaction":64.7,"frisk":65.5,"search":42.3,"weapon":17.4,"firearm":10.0,"contraband":5.7,"anyfind":21.3},"Black|Female":{"n":616,"arrest":37.5,"summons":1.9,"noaction":60.9,"frisk":35.7,"search":37.0,"weapon":8.6,"firearm":3.6,"contraband":3.6,"anyfind":11.4},"Hispanic|Male":{"n":4124,"arrest":32.3,"summons":2.9,"noaction":65.2,"frisk":62.1,"search":43.3,"weapon":16.9,"firearm":6.3,"contraband":6.5,"anyfind":21.2},"Hispanic|Female":{"n":342,"arrest":34.2,"summons":1.5,"noaction":64.6,"frisk":42.4,"search":40.9,"weapon":8.2,"firearm":4.1,"contraband":6.1,"anyfind":13.7},"White|Male":{"n":929,"arrest":37.1,"summons":1.5,"noaction":61.5,"frisk":35.1,"search":43.9,"weapon":9.6,"firearm":2.3,"contraband":6.4,"anyfind":14.7},"White|Female":{"n":145,"arrest":40.7,"summons":0.7,"noaction":58.6,"frisk":20.7,"search":44.8,"weapon":6.9,"firearm":1.4,"contraband":6.2,"anyfind":13.1},"Asian / Pacific Islander|Male":{"n":298,"arrest":35.9,"summons":2.3,"noaction":61.7,"frisk":48.3,"search":42.3,"weapon":13.8,"firearm":5.7,"contraband":6.0,"anyfind":18.5},"Asian / Pacific Islander|Female":{"n":22,"arrest":27.3,"summons":0.0,"noaction":72.7,"frisk":22.7,"search":36.4,"weapon":9.1,"firearm":4.5,"contraband":0.0,"anyfind":9.1},"Other|Male":{"n":166,"arrest":30.1,"summons":0.6,"noaction":69.3,"frisk":45.8,"search":34.9,"weapon":9.6,"firearm":4.2,"contraband":1.8,"anyfind":10.8}},"force_flags":{"Handcuffed":18.6,"Verbal instruction":91.5,"Weapon drawn":4.6,"Restraint":3.3,"Other force":2.5},"force_by_race":{"Black":4.6,"Hispanic":4.5,"White":4.2,"Asian / Pacific Islander":6.9,"Other":9.8},"boro":[{"boro":"Bronx","n":4495,"per1000":3.05,"pop":1472654,"pop_black":28.5,"pop_hisp":54.8,"pop_white":8.9,"pop_asian":4.6,"stop_black":54.7,"stop_hisp":40.3,"stop_white":1.8,"stop_asian":0.2,"arrest":24.5},{"boro":"Brooklyn","n":4465,"per1000":1.63,"pop":2736074,"pop_black":26.7,"pop_hisp":18.9,"pop_white":35.4,"pop_asian":13.6,"stop_black":68.6,"stop_hisp":19.7,"stop_white":8.0,"stop_asian":1.6,"arrest":32.3},{"boro":"Manhattan","n":3351,"per1000":1.98,"pop":1694251,"pop_black":11.8,"pop_hisp":23.8,"pop_white":46.8,"pop_asian":13.0,"stop_black":58.4,"stop_hisp":30.1,"stop_white":8.7,"stop_asian":1.1,"arrest":40.1},{"boro":"Queens","n":2351,"per1000":0.98,"pop":2405464,"pop_black":15.9,"pop_hisp":27.8,"pop_white":22.8,"pop_asian":27.3,"stop_black":50.3,"stop_hisp":28.8,"stop_white":10.1,"stop_asian":8.3,"arrest":39.2},{"boro":"Staten Island","n":440,"per1000":0.89,"pop":495747,"pop_black":9.4,"pop_hisp":19.6,"pop_white":56.1,"pop_asian":11.9,"stop_black":45.2,"stop_hisp":23.6,"stop_white":25.5,"stop_asian":2.5,"arrest":40.0}],"boro_corr":{"black_pop_vs_rate":0.67,"white_pop_vs_rate":-0.61,"hisp_pop_vs_rate":0.82,"black_pop_vs_black_stop":0.61},"precincts":[{"precinct":46,"n":1143,"boro":"Bronx","black":56.1,"hisp":38.5,"white":0.9,"asian":0.0,"other":4.5,"arrest":12.5},{"precinct":75,"n":502,"boro":"Brooklyn","black":80.9,"hisp":16.3,"white":0.8,"asian":0.8,"other":1.2,"arrest":21.5},{"precinct":48,"n":471,"boro":"Bronx","black":59.0,"hisp":35.5,"white":1.1,"asian":0.0,"other":4.5,"arrest":22.7},{"precinct":40,"n":437,"boro":"Bronx","black":52.6,"hisp":44.9,"white":1.4,"asian":0.0,"other":1.1,"arrest":26.1},{"precinct":43,"n":436,"boro":"Bronx","black":53.2,"hisp":43.3,"white":0.5,"asian":0.5,"other":2.5,"arrest":28.9},{"precinct":73,"n":396,"boro":"Brooklyn","black":86.6,"hisp":11.9,"white":0.5,"asian":0.0,"other":1.0,"arrest":26.8},{"precinct":44,"n":377,"boro":"Bronx","black":53.1,"hisp":43.5,"white":1.3,"asian":0.3,"other":1.9,"arrest":25.7},{"precinct":52,"n":373,"boro":"Bronx","black":40.5,"hisp":53.9,"white":1.9,"asian":0.3,"other":3.5,"arrest":20.6},{"precinct":14,"n":333,"boro":"Manhattan","black":60.7,"hisp":25.2,"white":10.5,"asian":1.5,"other":2.1,"arrest":39.6},{"precinct":42,"n":320,"boro":"Bronx","black":63.4,"hisp":33.8,"white":1.2,"asian":0.3,"other":1.2,"arrest":32.8},{"precinct":67,"n":315,"boro":"Brooklyn","black":88.3,"hisp":6.7,"white":2.9,"asian":0.3,"other":1.9,"arrest":32.7},{"precinct":79,"n":276,"boro":"Brooklyn","black":75.0,"hisp":17.0,"white":5.1,"asian":0.4,"other":2.5,"arrest":37.0},{"precinct":47,"n":258,"boro":"Bronx","black":75.2,"hisp":19.0,"white":1.6,"asian":0.4,"other":3.9,"arrest":36.8},{"precinct":81,"n":256,"boro":"Brooklyn","black":90.6,"hisp":8.2,"white":0.0,"asian":0.0,"other":1.2,"arrest":27.7},{"precinct":28,"n":248,"boro":"Manhattan","black":82.7,"hisp":11.7,"white":4.4,"asian":0.0,"other":1.2,"arrest":30.2}],"n_precincts":77,"top15_share":40.7,"top5_share":19.8,"precinct_gt_100":63,"map":{"cell":1500,"cells":[[675,168,134],[673,166,127],[674,167,97],[674,166,87],[675,167,83],[674,168,83],[657,142,77],[674,165,75],[673,165,73],[671,166,72],[672,165,68],[675,169,66],[658,143,64],[671,165,62],[672,166,59],[674,170,57],[671,155,55],[673,168,52],[667,153,52],[666,155,51],[666,153,50],[673,121,48],[665,160,47],[659,148,46],[671,162,46],[677,164,44],[666,151,44],[658,142,43],[676,168,42],[675,121,41],[670,155,41],[664,148,41],[658,141,41],[664,154,41],[669,124,40],[667,152,39],[674,169,38],[669,122,37],[658,127,36],[670,124,36],[671,156,35],[657,143,35],[676,164,35],[674,159,35],[665,153,35],[666,162,35],[670,165,35],[656,137,34],[656,99,33],[659,149,33],[673,172,33],[673,122,33],[661,152,33],[672,161,33],[670,157,33],[659,127,32],[681,136,32],[676,169,32],[673,124,32],[678,164,31],[672,167,31],[667,158,31],[665,154,31],[671,159,31],[667,154,30],[668,153,30],[671,157,30],[670,166,30],[673,120,30],[642,115,30],[682,159,30],[676,167,30],[677,166,29],[667,129,29],[670,164,29],[662,153,29],[674,158,28],[670,169,28],[673,162,27],[665,151,27],[662,154,27],[654,132,27],[663,153,27],[676,122,27],[667,130,27],[657,99,27],[659,135,27],[680,160,27],[666,152,26],[668,122,26],[673,161,26],[657,144,26],[684,134,26],[677,165,26],[674,174,26],[673,167,26],[676,165,26],[665,156,25],[663,133,25],[676,161,25],[671,167,25],[666,156,25],[660,125,25],[667,160,25],[659,126,25],[680,161,25],[667,156,25],[659,140,25],[657,134,25],[672,159,25],[658,134,24],[668,165,24],[669,162,24],[676,162,24],[664,155,24],[671,161,24],[673,169,24],[666,159,24],[665,124,24],[681,172,24],[655,137,24],[669,156,24],[658,144,24],[675,122,24],[675,159,24],[673,171,24],[672,122,23],[671,164,23],[665,128,23],[664,117,23],[665,155,23],[676,166,23],[667,127,23],[670,162,23],[666,150,23],[701,106,23],[657,132,23],[659,134,23],[667,128,23],[666,157,23],[673,160,22],[669,168,22],[670,127,22],[666,126,22],[679,161,22],[680,159,22],[660,128,22],[664,158,22],[667,155,22],[675,165,22],[664,153,22],[675,164,22],[672,123,22],[670,123,21],[659,129,21],[664,159,21],[674,161,21],[674,171,21],[691,129,21],[682,132,21],[672,157,21],[670,156,21],[676,120,21],[672,120,21],[675,120,21],[670,113,21],[675,166,21],[661,151,21],[665,113,21],[676,158,21],[673,157,20],[683,158,20],[670,120,20],[684,158,20],[665,152,20],[661,153,20],[666,128,20],[667,163,20],[669,127,20],[664,156,20],[677,119,20],[678,141,20],[654,123,20],[670,129,20],[674,121,20],[666,114,20],[666,160,20],[672,162,20],[665,159,20],[658,137,19],[670,121,19],[669,167,19],[679,141,19],[660,139,19],[671,158,19],[655,123,19],[670,163,19],[666,161,19],[672,164,18],[678,123,18],[676,159,18],[659,143,18],[657,127,18],[678,162,18],[655,134,18],[668,126,18],[672,121,18],[671,145,18],[663,117,18],[679,160,18],[656,140,18],[656,136,18],[658,126,18],[662,152,18],[665,117,17],[659,128,17],[671,163,17],[668,121,17],[675,158,17],[657,135,17],[667,123,17],[665,135,17],[672,129,17],[668,166,17],[664,157,17],[673,119,17],[676,113,17],[658,133,17],[686,143,17],[689,123,17],[666,158,17],[658,125,17],[668,154,16],[660,127,16],[672,158,16],[657,141,16],[677,162,16],[693,130,16],[655,139,16],[668,123,16],[658,140,16],[625,100,16],[663,116,16],[666,143,16],[658,135,16],[673,163,16],[670,126,16],[667,124,16],[678,160,16],[674,163,16],[669,121,16],[641,114,16],[667,119,16],[658,99,16],[665,126,16],[674,160,15],[677,121,15],[675,170,15],[671,119,15],[670,170,15],[664,133,15],[672,118,15],[671,129,15],[671,128,15],[652,115,15],[671,122,15],[671,126,15],[676,157,15],[670,107,15],[676,160,15],[669,118,15],[677,167,15],[683,141,15],[676,121,15],[664,131,15],[663,131,15],[680,170,15],[673,158,15],[694,125,15],[667,157,15],[665,157,15],[659,136,15],[660,145,15],[676,119,14],[673,156,14],[671,120,14],[660,135,14],[666,124,14],[678,171,14],[653,116,14],[659,103,14],[672,163,14],[666,129,14],[665,161,14],[659,139,14],[673,164,14],[663,126,14],[668,152,14],[659,99,14],[675,157,14],[657,133,14],[674,173,14],[687,144,14],[674,164,14],[680,121,14],[650,109,14],[673,159,14],[679,162,14],[683,160,14],[673,129,14],[671,127,14],[635,97,14],[688,126,13],[664,128,13],[691,102,13],[657,139,13],[692,129,13],[679,123,13],[662,151,13],[659,142,13],[658,147,13],[669,161,13],[667,126,13],[657,105,13],[664,136,13],[670,118,13],[669,117,13],[671,160,13],[680,172,13],[674,157,13],[676,170,13],[670,168,13],[668,128,13],[664,124,13],[695,131,13],[672,171,13],[658,132,13],[659,146,13],[687,166,13],[660,142,13],[663,146,13],[680,158,13],[673,115,13],[666,154,13],[668,161,13],[673,123,13],[695,104,13],[666,127,13],[690,130,13],[665,150,13],[666,117,13],[677,171,13],[672,155,13],[676,163,13],[657,146,13],[679,121,12],[673,114,12],[657,138,12],[668,147,12],[662,149,12],[679,122,12],[656,134,12],[670,119,12],[678,163,12],[668,120,12],[659,137,12],[660,152,12],[660,150,12],[671,169,12],[681,137,12],[666,133,12],[635,98,12],[672,119,12],[681,174,12],[673,118,12],[681,158,12],[667,103,12],[669,108,12],[656,139,12],[693,131,12],[681,173,12],[683,136,12],[667,159,12],[674,172,12],[665,127,12],[673,128,12],[659,144,12],[625,113,12],[701,107,12],[663,128,12],[674,116,12],[691,134,12],[668,124,12],[665,114,11],[675,117,11],[659,133,11],[680,141,11],[669,169,11],[658,139,11],[656,108,11],[667,122,11],[663,119,11],[669,113,11],[673,170,11],[659,147,11],[663,125,11],[668,144,11],[657,140,11],[655,138,11],[696,126,11],[661,150,11],[687,142,11],[667,133,11],[680,163,11],[666,130,11],[669,130,11],[668,118,11],[658,136,11],[665,120,11],[674,162,11],[680,171,11],[659,125,11],[655,99,11],[694,128,11],[696,125,10],[673,131,10],[656,98,10],[670,109,10],[665,149,10],[655,135,10],[682,158,10],[663,132,10],[698,125,10],[670,122,10],[687,145,10],[676,117,10],[664,115,10],[677,163,10],[672,124,10],[677,140,10],[658,122,10],[696,128,10],[689,130,10],[679,125,10],[671,123,10],[676,123,10],[668,167,10],[694,126,10],[683,172,10],[675,119,10],[670,160,10],[681,161,10],[695,103,10],[672,125,10],[667,162,10],[663,118,10],[685,174,10],[681,160,10],[663,144,10],[683,164,10],[667,134,10],[675,161,10],[666,132,10],[669,120,10],[681,157,10],[672,156,10],[692,131,10],[679,172,10],[671,130,10],[664,140,10],[678,161,10],[664,147,10],[660,136,10],[680,169,10],[690,136,10],[681,123,10],[671,113,10],[701,124,10],[703,124,9],[667,120,9],[661,144,9],[692,130,9],[699,104,9],[683,161,9],[678,122,9],[670,158,9],[659,145,9],[666,149,9],[687,143,9],[673,173,9],[673,127,9],[662,100,9],[669,159,9],[675,116,9],[666,113,9],[672,168,9],[684,170,9],[682,176,9],[694,127,9],[683,178,9],[663,134,9],[675,115,9],[685,124,9],[664,125,9],[664,116,9],[667,151,9],[670,161,9],[660,99,9],[666,131,9],[663,107,9],[676,118,9],[662,146,9],[671,146,9],[654,131,9],[668,158,9],[665,132,9],[657,129,9],[656,124,9],[660,143,9],[677,113,9],[668,129,9],[692,128,9],[677,143,9],[683,177,9],[657,126,9],[669,160,9],[667,161,9],[666,112,9],[683,162,9],[654,114,9],[667,104,9],[670,125,8],[681,175,8],[660,134,8],[677,141,8],[677,123,8],[696,132,8],[663,157,8],[663,154,8],[665,115,8],[654,133,8],[671,108,8],[656,131,8],[667,164,8],[677,157,8],[669,119,8],[658,129,8],[666,123,8],[628,111,8],[684,164,8],[657,137,8],[681,171,8],[680,142,8],[655,140,8],[658,130,8],[688,159,8],[663,115,8],[665,129,8],[661,123,8],[668,104,8],[661,106,8],[671,118,8],[686,125,8],[665,148,8],[686,149,8],[680,167,8],[683,138,8],[660,124,8],[667,143,8],[672,143,8],[662,99,8],[664,134,8],[671,121,8],[678,120,8],[697,124,8],[675,124,8],[689,131,8],[684,138,8],[681,159,8],[656,133,8],[667,165,8],[656,132,8],[680,162,8],[668,127,8],[659,150,8],[704,123,8],[656,115,8],[611,82,8],[625,114,8],[679,142,8],[658,128,8],[687,126,8],[683,179,8],[665,134,8],[668,103,8],[655,115,8],[672,113,8],[697,131,8],[671,171,8],[665,131,8],[687,174,8],[659,107,7],[696,127,7],[665,121,7],[637,100,7],[674,119,7],[661,143,7],[672,160,7],[657,128,7],[660,141,7],[681,122,7],[681,162,7],[683,126,7],[671,111,7],[661,145,7],[677,168,7],[674,128,7],[661,127,7],[653,115,7],[699,122,7],[676,171,7],[661,128,7],[678,159,7],[664,101,7],[687,165,7],[631,112,7],[680,124,7],[655,114,7],[708,140,7],[677,170,7],[680,123,7],[667,135,7],[669,111,7],[663,127,7],[656,144,7],[680,173,7],[669,163,7],[675,114,7],[676,140,7],[675,160,7],[662,145,7],[670,130,7],[694,129,7],[668,117,7],[679,118,7],[656,141,7],[687,118,7],[668,164,7],[660,149,7],[664,114,7],[697,127,7],[690,138,7],[669,125,7],[692,123,7],[658,100,7],[662,133,7],[672,173,7],[675,137,7],[661,125,7],[670,128,7],[671,124,7],[690,102,7],[669,158,7],[664,120,7],[677,124,7],[666,125,7],[684,159,7],[688,142,7],[667,125,7],[683,159,7],[659,141,7],[681,168,7],[682,175,7],[671,125,7],[685,126,7],[681,169,7],[680,125,7],[661,99,7],[697,123,7],[700,105,7],[683,139,7],[669,123,7],[690,139,7],[671,144,7],[688,124,7],[684,162,7],[657,115,7],[658,148,7],[656,104,7],[663,105,7],[669,155,7],[687,169,7],[669,157,7],[690,129,6],[669,128,6],[677,133,6],[690,101,6],[672,114,6],[670,146,6],[678,139,6],[680,137,6],[654,117,6],[667,131,6],[664,137,6],[660,151,6],[673,130,6],[673,125,6],[655,141,6],[661,142,6],[672,130,6],[659,100,6],[664,126,6],[650,113,6],[680,164,6],[674,122,6],[669,112,6],[656,138,6],[701,129,6],[678,119,6],[681,163,6],[652,114,6],[675,123,6],[651,110,6],[651,113,6],[701,105,6],[696,104,6],[657,110,6],[701,121,6],[662,128,6],[672,148,6],[668,125,6],[674,132,6],[662,125,6],[691,128,6],[694,124,6],[702,124,6],[678,172,6],[661,112,6],[690,145,6],[629,111,6],[669,126,6],[662,144,6],[673,132,6],[672,116,6],[695,132,6],[678,124,6],[682,161,6],[682,168,6],[691,130,6],[663,106,6],[701,141,6],[685,163,6],[683,174,6],[671,142,6],[656,135,6],[658,138,6],[683,124,6],[663,99,6],[676,125,6],[672,172,6],[700,106,6],[640,108,6],[672,128,6],[670,114,6],[691,127,6],[656,142,6],[618,90,6],[660,111,6],[672,140,6],[683,137,6],[668,130,6],[657,130,6],[679,159,6],[675,142,6],[665,147,6],[657,145,6],[668,116,6],[684,174,6],[634,113,6],[679,164,6],[685,125,6],[677,120,6],[692,144,6],[685,164,6],[653,114,6],[695,128,6],[654,135,6],[661,101,6],[665,133,6],[665,146,6],[656,145,6],[674,155,6],[680,177,5],[681,121,5],[681,142,5],[663,122,5],[657,98,5],[658,145,5],[682,171,5],[689,159,5],[659,124,5],[655,131,5],[670,117,5],[669,143,5],[662,103,5],[657,136,5],[675,113,5],[676,129,5],[668,109,5],[684,135,5],[666,122,5],[653,131,5],[678,170,5],[699,120,5],[681,141,5],[661,146,5],[655,112,5],[681,124,5],[641,111,5],[631,105,5],[675,130,5],[657,109,5],[684,160,5],[657,125,5],[679,130,5],[676,141,5],[685,134,5],[691,136,5],[665,118,5],[632,105,5],[680,122,5],[666,115,5],[668,145,5],[665,122,5],[654,138,5],[673,116,5],[678,125,5],[702,104,5],[691,123,5],[670,140,5],[696,129,5],[668,142,5],[688,143,5],[674,120,5],[663,147,5],[666,116,5],[641,115,5],[671,139,5],[694,103,5],[702,128,5],[683,171,5],[694,123,5],[655,107,5],[654,116,5],[662,109,5],[666,134,5],[655,136,5],[664,127,5],[687,133,5],[686,124,5],[696,136,5],[688,123,5],[665,104,5],[686,133,5],[670,143,5],[665,119,5],[670,131,5],[660,112,5],[630,114,5],[657,124,5],[693,128,5],[695,138,5],[672,169,5],[667,150,5],[665,123,5],[697,104,5],[672,111,5],[680,130,5],[664,102,5],[670,144,5],[673,174,5],[668,155,5],[660,140,5],[668,159,5],[677,115,5],[666,103,5],[653,130,5],[699,121,5],[677,118,5],[692,127,5],[657,121,5],[703,104,5],[654,124,5],[679,163,5],[685,168,5],[698,142,5],[672,174,5],[701,144,5],[653,129,5],[693,126,5],[699,119,5],[673,145,4],[654,130,4],[695,126,4],[666,142,4],[655,116,4],[685,175,4],[699,144,4],[694,130,4],[673,135,4],[696,103,4],[664,132,4],[670,159,4],[694,131,4],[703,133,4],[637,104,4],[639,114,4],[666,105,4],[665,136,4],[656,123,4],[679,124,4],[683,135,4],[671,143,4],[679,126,4],[664,149,4],[664,138,4],[690,131,4],[680,157,4],[667,114,4],[658,108,4],[688,144,4],[658,121,4],[663,155,4],[674,129,4],[663,123,4],[693,146,4],[654,115,4],[692,132,4],[700,127,4],[702,106,4],[679,171,4],[664,121,4],[673,117,4],[684,171,4],[663,121,4],[678,140,4],[692,122,4],[698,132,4],[659,119,4],[664,122,4],[691,125,4],[673,126,4],[639,116,4],[684,172,4],[658,124,4],[679,140,4],[675,173,4],[660,107,4],[675,134,4],[668,101,4],[658,104,4],[672,142,4],[687,125,4],[671,115,4],[670,115,4],[657,122,4],[655,118,4],[699,130,4],[688,161,4],[686,134,4],[666,108,4],[677,173,4],[683,176,4],[654,139,4],[686,144,4],[624,114,4],[667,118,4],[675,118,4],[667,166,4],[669,114,4],[703,136,4],[693,127,4],[687,124,4],[675,178,4],[684,175,4],[686,170,4],[657,106,4],[654,118,4],[701,122,4],[689,101,4],[684,150,4],[698,104,4],[672,126,4],[626,102,4],[668,111,4],[662,122,4],[658,146,4],[689,126,4],[684,176,4],[659,106,4],[689,135,4],[680,168,4],[660,133,4],[662,150,4],[699,125,4],[613,88,4],[655,132,4],[699,127,4],[662,101,4],[682,134,4],[633,113,4],[689,128,4],[664,151,4],[676,139,4],[696,147,4],[698,143,4],[662,131,4],[688,145,4],[627,108,4],[670,108,4],[669,166,4],[663,152,4],[655,106,4],[659,122,4],[670,111,4],[699,135,4],[642,114,4],[690,128,4],[666,111,4],[662,117,4],[668,112,4],[701,126,4],[685,151,4],[700,132,4],[631,103,4],[640,109,4],[677,122,4],[654,137,4],[701,131,4],[699,132,4],[683,163,4],[650,114,4],[695,139,4],[667,142,4],[682,139,4],[701,127,4],[701,128,4],[682,170,4],[695,123,4],[702,107,4],[678,114,4],[672,107,4],[691,122,4],[668,168,4],[631,111,4],[666,135,4],[687,164,4],[704,120,4],[668,156,4],[690,121,4],[685,128,3],[668,110,3],[681,138,3],[690,127,3],[675,140,3],[678,144,3],[663,120,3],[674,123,3],[642,109,3],[676,114,3],[656,103,3],[667,121,3],[668,119,3],[665,125,3],[660,126,3],[680,140,3],[686,162,3],[664,135,3],[637,99,3],[685,170,3],[642,111,3],[665,141,3],[654,134,3],[664,129,3],[686,146,3],[671,131,3],[675,139,3],[662,126,3],[693,103,3],[691,138,3],[658,106,3],[667,116,3],[688,101,3],[649,108,3],[694,132,3],[657,111,3],[685,176,3],[655,133,3],[661,154,3],[671,110,3],[685,149,3],[677,112,3],[677,129,3],[665,105,3],[679,138,3],[683,165,3],[672,131,3],[690,126,3],[687,101,3],[660,115,3],[630,113,3],[673,175,3],[669,140,3],[660,102,3],[671,117,3],[671,140,3],[674,115,3],[682,124,3],[668,108,3],[681,135,3],[698,122,3],[690,137,3],[626,111,3],[672,146,3],[672,144,3],[653,123,3],[659,138,3],[666,164,3],[700,124,3],[672,117,3],[679,131,3],[659,112,3],[664,107,3],[682,173,3],[660,146,3],[667,111,3],[703,129,3],[674,180,3],[661,141,3],[656,107,3],[659,104,3],[688,166,3],[667,141,3],[655,117,3],[678,121,3],[689,142,3],[670,110,3],[680,165,3],[670,116,3],[697,146,3],[658,123,3],[665,158,3],[690,124,3],[675,174,3],[663,109,3],[659,113,3],[682,177,3],[630,105,3],[678,130,3],[679,158,3],[658,102,3],[686,100,3],[616,90,3],[669,142,3],[639,115,3],[664,113,3],[669,153,3],[655,113,3],[678,173,3],[661,104,3],[628,103,3],[674,113,3],[663,112,3],[652,112,3],[669,105,3],[663,148,3],[668,163,3],[688,174,3],[695,124,3],[665,130,3],[691,101,3],[640,110,3],[669,145,3],[686,142,3],[666,120,3],[682,137,3],[683,127,3],[677,138,3],[663,158,3],[669,144,3],[660,144,3],[664,141,3],[671,112,3],[674,112,3],[677,125,3],[678,138,3],[681,176,3],[681,170,3],[688,127,3],[671,147,3],[671,154,3],[686,126,3],[676,135,3],[620,88,3],[682,138,3],[697,122,3],[693,136,3],[687,130,3],[698,120,3],[668,134,3],[686,164,3],[656,111,3],[700,134,3],[665,143,3],[672,133,3],[658,114,3],[671,150,3],[667,108,3],[651,114,3],[634,107,3],[689,124,3],[656,143,3],[613,87,3],[674,124,3],[693,125,3],[683,134,3],[676,112,3],[684,124,3],[625,112,3],[698,103,3],[672,109,3],[693,133,3],[667,144,3],[697,145,3],[664,118,3],[677,139,3],[698,121,3],[692,103,3],[626,112,3],[681,165,3],[706,118,3],[664,145,3],[659,132,3],[688,141,3],[663,108,3],[653,113,3],[678,174,3],[682,136,3],[612,86,3],[680,143,3],[705,120,3],[691,131,3],[693,147,3],[689,136,3],[678,135,3],[671,109,3],[617,91,3],[674,118,3],[684,139,3],[661,139,3],[688,134,3],[629,99,3],[693,150,3],[674,145,3],[702,149,3],[704,135,2],[684,147,2],[664,160,2],[688,129,2],[638,99,2],[663,129,2],[684,148,2],[663,110,2],[684,151,2],[669,170,2],[663,124,2],[687,132,2],[666,107,2],[663,103,2],[653,106,2],[660,106,2],[685,135,2],[682,122,2],[628,113,2],[669,151,2],[664,104,2],[687,170,2],[677,132,2],[664,110,2],[668,160,2],[656,126,2],[697,126,2],[650,111,2],[678,133,2],[653,117,2],[671,173,2],[702,129,2],[669,116,2],[657,120,2],[669,165,2],[674,130,2],[706,139,2],[673,179,2],[667,102,2],[689,148,2],[668,140,2],[679,120,2],[661,114,2],[687,131,2],[632,114,2],[629,113,2],[704,132,2],[681,177,2],[688,130,2],[700,142,2],[662,127,2],[680,126,2],[707,145,2],[675,132,2],[682,156,2],[628,89,2],[704,122,2],[650,110,2],[686,127,2],[680,144,2],[664,103,2],[674,148,2],[659,111,2],[650,108,2],[690,107,2],[656,121,2],[631,106,2],[673,147,2],[668,146,2],[662,107,2],[661,116,2],[656,114,2],[661,140,2],[665,140,2],[685,150,2],[680,120,2],[673,110,2],[669,115,2],[682,127,2],[688,137,2],[695,146,2],[684,165,2],[654,111,2],[690,134,2],[657,113,2],[676,144,2],[678,142,2],[683,175,2],[663,102,2],[674,138,2],[685,122,2],[699,124,2],[682,172,2],[689,160,2],[677,114,2],[701,140,2],[615,90,2],[673,155,2],[678,143,2],[686,129,2],[676,130,2],[686,159,2],[664,99,2],[704,131,2],[698,144,2],[655,104,2],[678,126,2],[702,133,2],[664,100,2],[663,145,2],[656,109,2],[671,170,2],[682,160,2],[616,86,2],[698,123,2],[659,114,2],[681,166,2],[667,147,2],[702,130,2],[687,163,2],[661,102,2],[682,131,2],[676,124,2],[671,114,2],[706,127,2],[661,148,2],[641,109,2],[703,128,2],[675,180,2],[694,142,2],[671,102,2],[683,170,2],[682,174,2],[666,137,2],[704,121,2],[685,143,2],[659,102,2],[625,101,2],[678,116,2],[680,166,2],[687,149,2],[637,102,2],[625,111,2],[686,174,2],[678,132,2],[680,127,2],[690,125,2],[684,163,2],[668,102,2],[699,126,2],[661,126,2],[673,143,2],[654,110,2],[686,172,2],[656,105,2],[696,130,2],[695,130,2],[631,113,2],[678,175,2],[689,158,2],[657,108,2],[640,104,2],[658,115,2],[674,117,2],[627,113,2],[701,125,2],[687,129,2],[704,145,2],[673,139,2],[685,120,2],[665,106,2],[669,110,2],[643,109,2],[643,105,2],[685,127,2],[668,115,2],[700,126,2],[662,134,2],[695,125,2],[633,107,2],[684,169,2],[654,112,2],[658,120,2],[688,172,2],[677,172,2],[700,128,2],[683,128,2],[673,146,2],[703,137,2],[696,137,2],[681,98,2],[702,135,2],[704,133,2],[669,129,2],[654,125,2],[658,113,2],[657,104,2],[695,102,2],[633,99,2],[682,140,2],[690,135,2],[664,123,2],[696,124,2],[664,105,2],[625,91,2],[689,125,2],[643,102,2],[681,127,2],[687,127,2],[692,142,2],[697,147,2],[705,119,2],[686,123,2],[682,157,2],[667,109,2],[696,123,2],[698,130,2],[663,113,2],[663,135,2],[674,140,2],[652,116,2],[685,169,2],[699,123,2],[655,142,2],[700,103,2],[668,114,2],[630,111,2],[684,136,2],[665,102,2],[662,155,2],[698,145,2],[684,128,2],[658,111,2],[672,139,2],[653,132,2],[660,148,2],[707,135,2],[636,100,2],[685,146,2],[662,143,2],[621,91,2],[660,114,2],[695,129,2],[663,137,2],[688,157,2],[640,114,2],[656,106,2],[706,121,2],[685,100,2],[700,119,2],[641,103,2],[702,131,2],[683,133,2],[632,112,2],[704,136,2],[668,131,2],[677,160,2],[699,143,2],[633,106,2],[665,137,2],[655,143,2],[673,140,2],[656,120,2],[659,109,2],[650,112,2],[672,147,2],[664,150,2],[662,156,2],[658,107,2],[629,91,2],[699,103,2],[675,171,2],[696,131,2],[627,111,2],[687,119,2],[657,123,2],[677,156,2],[697,143,2],[689,138,2],[674,142,2],[672,127,2],[632,98,2],[668,105,2],[694,136,2],[657,131,2],[679,166,2],[685,161,2],[703,115,1],[670,145,1],[635,95,1],[687,171,1],[667,138,1],[659,116,1],[670,142,1],[685,160,1],[676,173,1],[664,139,1],[626,113,1],[664,109,1],[703,130,1],[689,145,1],[660,101,1],[665,103,1],[664,106,1],[639,98,1],[702,140,1],[703,121,1],[676,142,1],[688,132,1],[655,100,1],[670,112,1],[677,136,1],[689,175,1],[697,125,1],[695,142,1],[629,109,1],[687,146,1],[690,152,1],[635,100,1],[665,139,1],[696,141,1],[660,119,1],[679,115,1],[632,95,1],[692,151,1],[698,126,1],[665,144,1],[658,112,1],[629,107,1],[632,113,1],[660,118,1],[685,152,1],[629,93,1],[694,141,1],[681,132,1],[705,146,1],[676,138,1],[662,111,1],[629,102,1],[660,116,1],[672,149,1],[654,106,1],[684,131,1],[686,173,1],[682,165,1],[629,94,1],[706,135,1],[686,131,1],[640,106,1],[698,138,1],[686,135,1],[662,123,1],[679,139,1],[689,139,1],[690,122,1],[675,129,1],[624,99,1],[695,133,1],[658,98,1],[662,116,1],[661,132,1],[662,142,1],[673,178,1],[688,131,1],[630,97,1],[632,96,1],[683,118,1],[626,110,1],[662,114,1],[624,91,1],[661,149,1],[692,102,1],[684,133,1],[657,107,1],[666,148,1],[695,144,1],[690,150,1],[687,161,1],[667,113,1],[669,164,1],[689,149,1],[653,118,1],[660,138,1],[681,130,1],[628,101,1],[632,97,1],[688,125,1],[686,101,1],[688,149,1],[674,134,1],[691,124,1],[654,107,1],[661,118,1],[701,103,1],[651,109,1],[635,110,1],[657,116,1],[671,149,1],[666,118,1],[677,174,1],[682,162,1],[666,165,1],[685,123,1],[656,128,1],[671,116,1],[677,161,1],[671,174,1],[666,106,1],[683,173,1],[675,177,1],[656,100,1],[687,173,1],[652,113,1],[653,105,1],[661,124,1],[691,121,1],[657,114,1],[705,124,1],[626,108,1],[669,139,1],[679,132,1],[697,129,1],[632,108,1],[693,151,1],[669,147,1],[678,118,1],[629,114,1],[643,110,1],[654,105,1],[694,146,1],[640,115,1],[674,141,1],[706,124,1],[626,94,1],[665,116,1],[675,156,1],[611,87,1],[668,143,1],[630,104,1],[672,115,1],[690,151,1],[616,91,1],[642,112,1],[701,132,1],[684,157,1],[684,149,1],[662,129,1],[689,122,1],[682,125,1],[686,145,1],[654,108,1],[628,114,1],[621,112,1],[677,117,1],[668,170,1],[689,143,1],[655,110,1],[697,130,1],[634,112,1],[663,149,1],[678,165,1],[704,127,1],[674,131,1],[684,119,1],[660,113,1],[640,116,1],[691,103,1],[663,136,1],[696,146,1],[632,106,1],[693,149,1],[690,120,1],[635,99,1],[689,129,1],[694,166,1],[625,95,1],[617,89,1],[676,172,1],[618,87,1],[662,113,1],[704,130,1],[653,124,1],[652,109,1],[612,83,1],[684,137,1],[685,121,1],[679,136,1],[628,110,1],[706,146,1],[687,100,1],[700,122,1],[653,112,1],[675,162,1],[666,101,1],[656,110,1],[624,100,1],[654,100,1],[661,129,1],[663,130,1],[618,86,1],[699,128,1],[663,151,1],[673,111,1],[691,152,1],[703,140,1],[680,119,1],[675,146,1],[677,158,1],[655,126,1],[700,107,1],[679,137,1],[673,104,1],[654,122,1],[656,119,1],[632,94,1],[702,139,1],[679,143,1],[672,134,1],[666,109,1],[698,148,1],[693,104,1],[640,113,1],[619,93,1],[677,159,1],[641,112,1],[676,146,1],[696,121,1],[693,123,1],[672,112,1],[702,118,1],[662,112,1],[677,134,1],[664,130,1],[691,142,1],[694,138,1],[658,116,1],[667,112,1],[621,103,1],[691,135,1],[705,133,1],[672,136,1],[702,103,1],[654,141,1],[669,146,1],[662,102,1],[684,125,1],[693,144,1],[672,141,1],[702,137,1],[703,138,1],[662,132,1],[637,108,1],[654,113,1],[660,109,1],[642,110,1],[631,114,1],[694,139,1],[671,141,1],[674,139,1],[697,133,1],[642,104,1],[684,127,1],[688,171,1],[673,107,1],[653,133,1],[699,131,1],[638,115,1],[682,141,1],[676,116,1],[667,107,1],[637,113,1],[701,135,1],[696,135,1],[652,117,1],[611,81,1],[660,98,1],[686,122,1],[704,141,1],[610,82,1],[708,138,1],[688,173,1],[661,110,1],[675,112,1],[666,119,1],[632,107,1],[671,148,1],[675,128,1],[612,84,1],[690,144,1],[663,156,1],[680,118,1],[684,173,1],[683,140,1],[686,128,1],[683,132,1],[679,135,1],[641,108,1],[687,172,1],[686,171,1],[661,111,1],[682,167,1],[680,135,1],[658,109,1],[668,113,1],[699,138,1],[685,162,1],[685,99,1],[661,122,1],[655,119,1],[624,95,1],[654,119,1],[670,154,1],[695,122,1],[612,89,1],[622,92,1],[639,103,1],[673,154,1],[668,141,1],[684,177,1],[678,167,1],[681,145,1],[619,90,1],[688,120,1],[678,129,1],[699,106,1],[673,142,1],[659,130,1],[689,141,1],[671,107,1],[688,160,1],[674,179,1],[641,113,1],[687,122,1],[686,175,1],[704,138,1],[652,131,1],[667,117,1],[660,121,1],[684,178,1],[660,100,1],[673,113,1],[686,99,1],[623,85,1],[641,110,1],[662,147,1],[633,98,1],[677,135,1],[703,119,1],[610,83,1],[659,105,1],[669,109,1],[641,116,1],[674,133,1],[702,105,1],[672,106,1],[662,119,1],[682,169,1],[683,142,1],[661,108,1],[690,143,1],[703,122,1],[688,152,1],[668,106,1],[634,114,1],[693,122,1],[698,133,1],[705,134,1],[659,110,1],[693,134,1],[700,104,1],[695,127,1],[660,103,1],[700,129,1],[677,130,1],[687,140,1],[687,147,1],[668,133,1],[689,132,1],[686,157,1],[669,131,1],[671,172,1],[629,112,1],[670,139,1],[692,125,1],[661,138,1],[665,138,1],[692,143,1],[660,129,1],[681,167,1],[683,166,1],[706,120,1],[655,124,1],[681,143,1],[677,169,1],[685,159,1],[679,146,1],[687,175,1],[675,179,1],[683,119,1],[706,136,1],[677,145,1],[640,111,1],[700,139,1],[704,128,1],[684,179,1],[703,127,1],[622,87,1],[673,133,1],[651,112,1],[667,145,1],[698,124,1],[669,104,1],[685,119,1],[676,134,1],[682,166,1],[703,123,1],[628,95,1],[690,141,1],[635,114,1],[663,114,1],[678,131,1],[700,144,1],[690,133,1],[613,84,1],[703,120,1],[705,123,1],[688,133,1],[667,110,1],[677,155,1],[691,139,1],[621,95,1],[696,143,1],[662,124,1],[683,149,1],[668,157,1],[668,107,1],[682,142,1],[667,105,1],[674,156,1],[620,102,1],[668,148,1],[678,177,1],[693,138,1],[661,107,1],[641,104,1],[705,139,1],[664,119,1],[663,100,1],[685,172,1],[640,103,1],[691,146,1],[709,136,1],[711,142,1],[674,175,1],[680,175,1],[629,108,1],[701,143,1],[664,146,1],[688,139,1],[679,173,1],[694,135,1],[702,125,1],[625,99,1],[665,162,1],[625,103,1],[686,163,1],[676,115,1],[656,113,1],[660,122,1],[700,121,1],[619,85,1],[693,148,1],[633,94,1],[689,164,1],[660,123,1],[702,147,1],[635,96,1],[673,148,1],[663,139,1],[638,101,1],[690,123,1],[705,118,1],[656,112,1],[634,96,1]],"n_mapped":15095},"finds":{"weapon":2411,"firearm":1187,"knife":1083,"otherweapon":265,"contraband":875,"anyfind":3020,"frisked":9066,"searched":6376,"frisked_or_searched":11315,"weapon_given_fs":20.3,"firearm_given_fs":10.0,"weapon_given_nofs":3.0},"finds_by_race":{"Black":{"weapon":16.8,"firearm":9.5,"contraband":5.5,"frisk":63.5},"Hispanic":{"weapon":16.3,"firearm":6.1,"contraband":6.4,"frisk":60.6},"White":{"weapon":9.4,"firearm":2.2,"contraband":6.4,"frisk":33.2},"Asian / Pacific Islander":{"weapon":13.4,"firearm":5.6,"contraband":5.6,"frisk":46.6},"Other":{"weapon":9.2,"firearm":4.0,"contraband":1.7,"frisk":45.7}},"weapon_given_frisk_by_race":{"Black":20.9,"Hispanic":21.6,"White":19.0,"Asian / Pacific Islander":24.2,"Other":12.7},"weapon_given_search_by_race":{"Black":39.3,"Hispanic":38.6,"White":29.1,"Asian / Pacific Islander":34.3,"Other":25.0},"cpw_vs_other":{"cpw":{"n":6908,"arrest":20.7,"summons":3.9,"noaction":75.8,"frisk":87.4,"search":39.4,"weapon":24.4,"firearm":15.0,"contraband":4.9,"anyfind":26.8},"other":{"n":8194,"arrest":43.4,"summons":1.9,"noaction":55.1,"frisk":37.0,"search":44.6,"weapon":8.8,"firearm":1.9,"contraband":6.6,"anyfind":14.3},"cpw_share_of_weapon_finds":69.9},"repeat":{"n_eligible":12506,"n_profiles":10404,"n_profiles_multi":1222,"stops_in_multi":3324,"share_in_multi":26.6,"max_group":16,"size_dist":{"2":802,"3":215,"4":98,"5":45,"6":27},"by_race":{"Black":33.7,"Hispanic":21.1,"White":3.5,"Asian / Pacific Islander":1.4,"Other":5.8},"arrest_multi":33.4,"arrest_single":36.6,"race_mix_multi":{"Black":74.8,"Hispanic":23.8,"White":1.0,"Asian / Pacific Islander":0.1,"Other":0.3},"race_mix_all":{"Black":59.1,"Hispanic":30.0,"White":7.3,"Asian / Pacific Islander":2.3,"Other":1.2},"same_day_same_precinct":null,"same_profile_same_day":68},"age_hist":{"10":5,"11":10,"12":34,"13":105,"14":263,"15":423,"16":555,"17":572,"18":693,"19":550,"20":821,"21":486,"22":497,"23":396,"24":345,"25":702,"26":317,"27":312,"28":356,"29":298,"30":711,"31":296,"32":311,"33":242,"34":266,"35":358,"36":213,"37":194,"38":204,"39":178,"40":359,"41":144,"42":163,"43":141,"44":128,"45":182,"46":110,"47":94,"48":76,"49":89,"50":174,"51":84,"52":83,"53":86,"54":83,"55":96,"56":68,"57":78,"58":59,"59":52,"60":81,"61":37,"62":39,"63":32,"64":22,"65":28,"66":9,"67":17,"68":9,"69":5,"70":8,"71":6,"72":2,"73":4,"74":8,"75":3,"76":1,"77":1,"78":2,"79":3},"age_missing":1723,"age_median":26.0,"age_mean":29.3,"age_groups":[{"group":"\u226414","n":417,"arrest":33.8,"summons":0.2,"noaction":65.9,"frisk":54.7,"search":39.6,"weapon":13.9,"firearm":5.0,"contraband":1.2,"anyfind":14.6,"share":3.1},{"group":"15\u201317","n":1550,"arrest":33.7,"summons":3.5,"noaction":63.6,"frisk":65.3,"search":45.5,"weapon":21.5,"firearm":12.3,"contraband":3.4,"anyfind":23.4,"share":11.6},{"group":"18\u201324","n":3788,"arrest":31.2,"summons":4.3,"noaction":64.9,"frisk":72.1,"search":42.2,"weapon":22.2,"firearm":13.7,"contraband":4.8,"anyfind":24.8,"share":28.3},{"group":"25\u201334","n":3811,"arrest":33.6,"summons":2.5,"noaction":64.2,"frisk":61.2,"search":43.1,"weapon":14.8,"firearm":6.9,"contraband":6.4,"anyfind":19.1,"share":28.5},{"group":"35\u201344","n":2082,"arrest":40.5,"summons":2.4,"noaction":57.3,"frisk":47.8,"search":45.2,"weapon":11.8,"firearm":4.4,"contraband":8.1,"anyfind":18.5,"share":15.6},{"group":"45\u201354","n":1061,"arrest":43.1,"summons":1.8,"noaction":55.3,"frisk":42.2,"search":47.8,"weapon":12.3,"firearm":2.4,"contraband":9.0,"anyfind":18.9,"share":7.9},{"group":"55+","n":670,"arrest":43.1,"summons":1.5,"noaction":55.8,"frisk":35.8,"search":47.6,"weapon":9.4,"firearm":1.5,"contraband":10.6,"anyfind":18.1,"share":5.0}],"under18_share":14.7,"under25_share":43.0,"age_reason":{"\u226414":{"All other":13.2,"Assault":14.9,"Burglary":5.0,"Cpw":40.0,"Grand Larceny":3.1,"Petit Larceny":5.5,"Robbery":18.2},"15\u201317":{"All other":13.7,"Assault":8.5,"Burglary":2.3,"Cpw":51.1,"Grand Larceny":1.7,"Petit Larceny":2.4,"Robbery":20.5},"18\u201324":{"All other":14.0,"Assault":6.5,"Burglary":4.0,"Cpw":59.7,"Grand Larceny":2.1,"Petit Larceny":2.5,"Robbery":11.3},"25\u201334":{"All other":18.0,"Assault":9.3,"Burglary":7.3,"Cpw":46.1,"Grand Larceny":2.9,"Petit Larceny":8.2,"Robbery":8.1},"35\u201344":{"All other":19.7,"Assault":9.1,"Burglary":12.0,"Cpw":30.1,"Grand Larceny":3.5,"Petit Larceny":18.3,"Robbery":7.2},"45\u201354":{"All other":21.5,"Assault":9.0,"Burglary":13.8,"Cpw":23.2,"Grand Larceny":5.0,"Petit Larceny":20.3,"Robbery":7.4},"55+":{"All other":23.1,"Assault":8.1,"Burglary":14.3,"Cpw":18.4,"Grand Larceny":5.8,"Petit Larceny":22.5,"Robbery":7.8}},"age_reason_order":["Cpw","Robbery","Petit Larceny","Assault","Burglary","Grand Larceny","All other"],"age_race":{"\u226414":{"Black":71.7,"Hispanic":17.7,"White":6.5,"Asian / Pacific Islander":3.1,"Other":1.0},"15\u201317":{"Black":62.1,"Hispanic":29.9,"White":4.9,"Asian / Pacific Islander":1.7,"Other":0.7},"18\u201324":{"Black":61.8,"Hispanic":31.1,"White":3.6,"Asian / Pacific Islander":1.6,"Other":1.2},"25\u201334":{"Black":57.7,"Hispanic":31.0,"White":7.4,"Asian / Pacific Islander":2.1,"Other":1.3},"35\u201344":{"Black":52.1,"Hispanic":31.1,"White":11.8,"Asian / Pacific Islander":3.0,"Other":1.7},"45\u201354":{"Black":53.4,"Hispanic":29.3,"White":12.9,"Asian / Pacific Islander":2.9,"Other":1.0},"55+":{"Black":61.6,"Hispanic":19.9,"White":12.8,"Asian / Pacific Islander":4.0,"Other":1.2}},"age_sex_female":{"\u226414":9.8,"15\u201317":7.5,"18\u201324":6.0,"25\u201334":7.9,"35\u201344":8.7,"45\u201354":9.2,"55+":6.9},"officer_note_unique_commands":199,"commands":[{"code":46,"n":1234,"arrest":11.3,"summons":2.8,"noaction":86.1,"frisk":91.1,"search":37.4,"weapon":18.6,"firearm":5.8,"contraband":3.7,"anyfind":21.0},{"code":75,"n":406,"arrest":20.7,"summons":3.2,"noaction":76.4,"frisk":74.4,"search":39.7,"weapon":21.4,"firearm":9.9,"contraband":3.7,"anyfind":23.6},{"code":40,"n":363,"arrest":25.9,"summons":1.7,"noaction":73.0,"frisk":79.1,"search":31.1,"weapon":19.3,"firearm":11.3,"contraband":9.4,"anyfind":25.9},{"code":52,"n":360,"arrest":21.1,"summons":4.7,"noaction":74.4,"frisk":85.0,"search":41.9,"weapon":23.6,"firearm":10.3,"contraband":4.2,"anyfind":24.7},{"code":44,"n":296,"arrest":27.4,"summons":2.7,"noaction":70.6,"frisk":72.0,"search":33.8,"weapon":26.7,"firearm":12.8,"contraband":6.8,"anyfind":31.4},{"code":48,"n":276,"arrest":23.6,"summons":1.4,"noaction":75.4,"frisk":76.8,"search":35.9,"weapon":21.7,"firearm":14.1,"contraband":6.2,"anyfind":23.2},{"code":43,"n":273,"arrest":33.3,"summons":3.7,"noaction":63.7,"frisk":75.8,"search":40.3,"weapon":16.5,"firearm":10.3,"contraband":6.6,"anyfind":19.8},{"code":67,"n":272,"arrest":31.6,"summons":2.6,"noaction":65.8,"frisk":63.6,"search":40.8,"weapon":25.7,"firearm":17.3,"contraband":4.0,"anyfind":26.5},{"code":73,"n":244,"arrest":24.6,"summons":4.5,"noaction":71.3,"frisk":78.3,"search":36.1,"weapon":27.0,"firearm":15.6,"contraband":5.7,"anyfind":31.1},{"code":42,"n":237,"arrest":32.5,"summons":3.8,"noaction":64.1,"frisk":78.5,"search":43.9,"weapon":21.5,"firearm":15.6,"contraband":7.6,"anyfind":26.6},{"code":50,"n":236,"arrest":31.8,"summons":3.4,"noaction":66.1,"frisk":56.8,"search":35.6,"weapon":11.4,"firearm":3.4,"contraband":8.5,"anyfind":17.8},{"code":803,"n":226,"arrest":26.1,"summons":7.1,"noaction":66.8,"frisk":74.3,"search":40.7,"weapon":27.0,"firearm":19.9,"contraband":7.5,"anyfind":31.9},{"code":24,"n":225,"arrest":45.3,"summons":0.9,"noaction":54.2,"frisk":39.6,"search":27.6,"weapon":8.4,"firearm":3.1,"contraband":4.9,"anyfind":12.4},{"code":14,"n":225,"arrest":41.3,"summons":0.4,"noaction":58.2,"frisk":37.3,"search":50.2,"weapon":12.0,"firearm":1.8,"contraband":11.1,"anyfind":18.7},{"code":113,"n":222,"arrest":28.8,"summons":1.4,"noaction":69.8,"frisk":74.8,"search":48.2,"weapon":18.9,"firearm":13.1,"contraband":5.4,"anyfind":22.5}],"commands_top10_share":26.2,"commands_top15_share":33.7,"ranks":[{"rank":"POM","n":12383,"arrest":32.8,"summons":2.7,"noaction":64.8,"frisk":60.4,"search":42.3,"weapon":16.1,"firearm":8.1,"contraband":5.7,"anyfind":20.0},{"rank":"POF","n":1615,"arrest":35.4,"summons":3.0,"noaction":61.8,"frisk":52.4,"search":40.7,"weapon":12.9,"firearm":5.0,"contraband":5.9,"anyfind":17.2},{"rank":"SGT","n":424,"arrest":33.7,"summons":2.6,"noaction":63.9,"frisk":66.5,"search":43.6,"weapon":20.5,"firearm":10.1,"contraband":7.3,"anyfind":26.4},{"rank":"DTS","n":330,"arrest":29.7,"summons":2.7,"noaction":67.9,"frisk":64.8,"search":44.2,"weapon":19.7,"firearm":8.8,"contraband":7.6,"anyfind":25.2},{"rank":"DT3","n":143,"arrest":28.7,"summons":4.2,"noaction":67.8,"frisk":76.2,"search":42.0,"weapon":23.8,"firearm":14.7,"contraband":7.7,"anyfind":27.3},{"rank":"LT","n":123,"arrest":28.5,"summons":4.1,"noaction":67.5,"frisk":69.1,"search":45.5,"weapon":12.2,"firearm":3.3,"contraband":4.1,"anyfind":16.3}],"command_spread":{"n_commands":88,"arrest_min":11.3,"arrest_max":67.6,"arrest_p25":27.2,"arrest_p75":43.9,"weapon_min":3.1,"weapon_max":69.8,"noaction_min":31.5,"noaction_max":86.1},"command_scatter":[[1,78,51.3,10.3],[5,55,25.5,10.9],[6,105,48.6,7.6],[7,66,50.0,9.1],[9,117,36.8,12.0],[10,52,61.5,13.5],[13,108,67.6,7.4],[14,225,41.3,12.0],[17,42,57.1,2.4],[18,113,40.7,10.6],[19,155,56.8,8.4],[20,131,56.5,7.6],[23,132,40.2,14.4],[24,225,45.3,8.4],[25,130,31.5,7.7],[26,34,41.2,8.8],[28,203,28.1,8.9],[30,171,41.5,11.7],[32,123,18.7,8.9],[33,82,29.3,7.3],[34,183,22.4,11.5],[40,363,25.9,19.3],[41,173,37.6,16.2],[42,237,32.5,21.5],[43,273,33.3,16.5],[44,296,27.4,26.7],[45,109,37.6,14.7],[46,1234,11.3,18.6],[47,198,41.4,27.8],[48,276,23.6,21.7],[49,113,38.9,11.5],[50,236,31.8,11.4],[52,360,21.1,23.6],[60,182,32.4,13.7],[61,149,33.6,10.1],[62,119,45.4,10.1],[63,199,44.2,8.0],[66,83,18.1,4.8],[67,272,31.6,25.7],[68,65,50.8,4.6],[69,187,33.2,16.6],[70,102,29.4,14.7],[71,129,22.5,10.9],[72,121,55.4,19.0],[73,244,24.6,27.0],[75,406,20.7,21.4],[76,80,56.2,18.8],[77,162,24.7,17.9],[78,70,40.0,8.6],[79,168,45.8,8.9],[81,212,26.4,21.7],[83,199,22.6,10.6],[84,165,35.2,8.5],[88,99,29.3,12.1],[90,118,51.7,22.9],[94,185,43.8,7.0],[100,64,32.8,3.1],[101,128,37.5,21.1],[102,85,51.8,16.5],[103,192,36.5,11.5],[104,160,38.8,5.0],[105,141,43.3,17.0],[106,162,45.7,7.4],[107,123,39.8,11.4],[108,70,60.0,18.6],[109,188,35.1,9.6],[110,100,28.0,12.0],[111,80,23.8,11.2],[112,189,65.6,3.7],[113,222,28.8,18.9],[114,173,35.3,8.7],[115,67,26.9,13.4],[120,79,40.5,19.0],[121,152,39.5,10.5],[122,98,42.9,8.2],[123,61,52.5,24.6],[138,39,25.6,20.5],[161,55,38.2,5.5],[181,56,46.4,12.5],[182,86,64.0,69.8],[183,177,26.6,38.4],[185,34,38.2,44.1],[187,67,25.4,38.8],[318,123,29.3,22.8],[437,35,17.1,2.9],[483,38,50.0,21.1],[801,38,34.2,15.8],[802,113,31.9,18.6],[803,226,26.1,27.0],[804,54,42.6,13.0],[805,152,34.2,12.5],[806,44,34.1,11.4],[807,108,28.7,25.0],[808,167,24.0,23.4],[809,48,41.7,10.4],[861,58,22.4,13.8],[862,41,24.4,14.6],[863,35,54.3,5.7],[866,34,38.2,11.8],[868,52,17.3,15.4],[870,35,28.6,17.1]],"noaction_2022":64.6,"race_nyclu_style":{"Black":58.7,"Hispanic":29.6,"White":7.1},"daily":{"2022-01-01":52,"2022-01-02":29,"2022-01-03":21,"2022-01-04":26,"2022-01-05":46,"2022-01-06":53,"2022-01-07":29,"2022-01-08":44,"2022-01-09":32,"2022-01-10":15,"2022-01-11":28,"2022-01-12":48,"2022-01-13":60,"2022-01-14":40,"2022-01-15":35,"2022-01-16":50,"2022-01-17":40,"2022-01-18":35,"2022-01-19":58,"2022-01-20":54,"2022-01-21":32,"2022-01-22":36,"2022-01-23":40,"2022-01-24":34,"2022-01-25":63,"2022-01-26":38,"2022-01-27":31,"2022-01-28":17,"2022-01-29":28,"2022-01-30":25,"2022-01-31":23,"2022-02-01":56,"2022-02-02":24,"2022-02-03":40,"2022-02-04":36,"2022-02-05":61,"2022-02-06":57,"2022-02-07":25,"2022-02-08":36,"2022-02-09":52,"2022-02-10":50,"2022-02-11":51,"2022-02-12":65,"2022-02-13":25,"2022-02-14":28,"2022-02-15":29,"2022-02-16":41,"2022-02-17":36,"2022-02-18":44,"2022-02-19":46,"2022-02-20":38,"2022-02-21":35,"2022-02-22":31,"2022-02-23":51,"2022-02-24":53,"2022-02-25":37,"2022-02-26":30,"2022-02-27":26,"2022-02-28":33,"2022-03-01":56,"2022-03-02":61,"2022-03-03":54,"2022-03-04":44,"2022-03-05":45,"2022-03-06":34,"2022-03-07":25,"2022-03-08":41,"2022-03-09":51,"2022-03-10":37,"2022-03-11":49,"2022-03-12":41,"2022-03-13":30,"2022-03-14":43,"2022-03-15":44,"2022-03-16":48,"2022-03-17":47,"2022-03-18":62,"2022-03-19":34,"2022-03-20":38,"2022-03-21":35,"2022-03-22":57,"2022-03-23":45,"2022-03-24":36,"2022-03-25":55,"2022-03-26":60,"2022-03-27":51,"2022-03-28":36,"2022-03-29":57,"2022-03-30":71,"2022-03-31":50,"2022-04-01":55,"2022-04-02":62,"2022-04-03":46,"2022-04-04":26,"2022-04-05":62,"2022-04-06":42,"2022-04-07":36,"2022-04-08":43,"2022-04-09":61,"2022-04-10":48,"2022-04-11":51,"2022-04-12":60,"2022-04-13":61,"2022-04-14":63,"2022-04-15":57,"2022-04-16":59,"2022-04-17":20,"2022-04-18":21,"2022-04-19":36,"2022-04-20":57,"2022-04-21":47,"2022-04-22":47,"2022-04-23":71,"2022-04-24":37,"2022-04-25":36,"2022-04-26":49,"2022-04-27":57,"2022-04-28":56,"2022-04-29":45,"2022-04-30":49,"2022-05-01":48,"2022-05-02":32,"2022-05-03":52,"2022-05-04":53,"2022-05-05":50,"2022-05-06":49,"2022-05-07":44,"2022-05-08":37,"2022-05-09":36,"2022-05-10":69,"2022-05-11":67,"2022-05-12":52,"2022-05-13":53,"2022-05-14":56,"2022-05-15":51,"2022-05-16":36,"2022-05-17":63,"2022-05-18":66,"2022-05-19":55,"2022-05-20":44,"2022-05-21":41,"2022-05-22":43,"2022-05-23":39,"2022-05-24":42,"2022-05-25":46,"2022-05-26":41,"2022-05-27":32,"2022-05-28":55,"2022-05-29":41,"2022-05-30":39,"2022-05-31":39,"2022-06-01":55,"2022-06-02":34,"2022-06-03":47,"2022-06-04":47,"2022-06-05":53,"2022-06-06":29,"2022-06-07":58,"2022-06-08":46,"2022-06-09":49,"2022-06-10":40,"2022-06-11":56,"2022-06-12":48,"2022-06-13":24,"2022-06-14":34,"2022-06-15":63,"2022-06-16":78,"2022-06-17":64,"2022-06-18":41,"2022-06-19":41,"2022-06-20":20,"2022-06-21":33,"2022-06-22":49,"2022-06-23":46,"2022-06-24":42,"2022-06-25":29,"2022-06-26":32,"2022-06-27":26,"2022-06-28":49,"2022-06-29":54,"2022-06-30":42,"2022-07-01":45,"2022-07-02":54,"2022-07-03":19,"2022-07-04":36,"2022-07-05":45,"2022-07-06":44,"2022-07-07":43,"2022-07-08":55,"2022-07-09":54,"2022-07-10":30,"2022-07-11":23,"2022-07-12":30,"2022-07-13":43,"2022-07-14":52,"2022-07-15":55,"2022-07-16":33,"2022-07-17":20,"2022-07-18":27,"2022-07-19":43,"2022-07-20":33,"2022-07-21":35,"2022-07-22":45,"2022-07-23":53,"2022-07-24":28,"2022-07-25":22,"2022-07-26":34,"2022-07-27":42,"2022-07-28":26,"2022-07-29":48,"2022-07-30":39,"2022-07-31":30,"2022-08-01":35,"2022-08-02":27,"2022-08-03":42,"2022-08-04":44,"2022-08-05":42,"2022-08-06":51,"2022-08-07":43,"2022-08-08":34,"2022-08-09":35,"2022-08-10":46,"2022-08-11":62,"2022-08-12":38,"2022-08-13":43,"2022-08-14":59,"2022-08-15":44,"2022-08-16":30,"2022-08-17":43,"2022-08-18":31,"2022-08-19":36,"2022-08-20":43,"2022-08-21":38,"2022-08-22":30,"2022-08-23":41,"2022-08-24":43,"2022-08-25":33,"2022-08-26":37,"2022-08-27":34,"2022-08-28":42,"2022-08-29":33,"2022-08-30":44,"2022-08-31":29,"2022-09-01":48,"2022-09-02":43,"2022-09-03":58,"2022-09-04":39,"2022-09-05":43,"2022-09-06":24,"2022-09-07":39,"2022-09-08":42,"2022-09-09":34,"2022-09-10":51,"2022-09-11":33,"2022-09-12":31,"2022-09-13":32,"2022-09-14":59,"2022-09-15":47,"2022-09-16":47,"2022-09-17":41,"2022-09-18":28,"2022-09-19":27,"2022-09-20":47,"2022-09-21":50,"2022-09-22":48,"2022-09-23":41,"2022-09-24":38,"2022-09-25":34,"2022-09-26":34,"2022-09-27":49,"2022-09-28":65,"2022-09-29":60,"2022-09-30":40,"2022-10-01":39,"2022-10-02":32,"2022-10-03":20,"2022-10-04":43,"2022-10-05":56,"2022-10-06":41,"2022-10-07":56,"2022-10-08":47,"2022-10-09":35,"2022-10-10":43,"2022-10-11":50,"2022-10-12":45,"2022-10-13":29,"2022-10-14":60,"2022-10-15":53,"2022-10-16":38,"2022-10-17":23,"2022-10-18":48,"2022-10-19":73,"2022-10-20":46,"2022-10-21":61,"2022-10-22":48,"2022-10-23":42,"2022-10-24":24,"2022-10-25":49,"2022-10-26":56,"2022-10-27":54,"2022-10-28":48,"2022-10-29":44,"2022-10-30":28,"2022-10-31":42,"2022-11-01":39,"2022-11-02":54,"2022-11-03":46,"2022-11-04":45,"2022-11-05":56,"2022-11-06":49,"2022-11-07":28,"2022-11-08":34,"2022-11-09":63,"2022-11-10":48,"2022-11-11":46,"2022-11-12":61,"2022-11-13":28,"2022-11-14":17,"2022-11-15":27,"2022-11-16":46,"2022-11-17":37,"2022-11-18":41,"2022-11-19":48,"2022-11-20":32,"2022-11-21":30,"2022-11-22":34,"2022-11-23":41,"2022-11-24":26,"2022-11-25":52,"2022-11-26":46,"2022-11-27":27,"2022-11-28":27,"2022-11-29":39,"2022-11-30":36,"2022-12-01":48,"2022-12-02":32,"2022-12-03":37,"2022-12-04":30,"2022-12-05":24,"2022-12-06":18,"2022-12-07":41,"2022-12-08":35,"2022-12-09":40,"2022-12-10":35,"2022-12-11":17,"2022-12-12":24,"2022-12-13":31,"2022-12-14":42,"2022-12-15":32,"2022-12-16":16,"2022-12-17":31,"2022-12-18":28,"2022-12-19":18,"2022-12-20":22,"2022-12-21":18,"2022-12-22":17,"2022-12-23":13,"2022-12-24":17,"2022-12-25":16,"2022-12-26":14,"2022-12-27":33,"2022-12-28":38,"2022-12-29":28,"2022-12-30":32,"2022-12-31":14},"flows":[["Asian / Pacific Islander",0,"Arrest",57],["Asian / Pacific Islander",0,"None",114],["Asian / Pacific Islander",1,"Arrest",56],["Asian / Pacific Islander",1,"None",86],["Asian / Pacific Islander",1,"Summons",7],["Black",0,"Arrest",1343],["Black",0,"None",1842],["Black",0,"Summons",54],["Black",1,"Arrest",1574],["Black",1,"None",3870],["Black",1,"Summons",180],["Hispanic",0,"Arrest",692],["Hispanic",0,"None",1056],["Hispanic",0,"Summons",17],["Hispanic",1,"Arrest",762],["Hispanic",1,"None",1861],["Hispanic",1,"Summons",89],["Other",0,"Arrest",28],["Other",0,"None",65],["Other",0,"Summons",1],["Other",1,"Arrest",22],["Other",1,"None",57],["Unknown",0,"Arrest",15],["Unknown",0,"None",30],["Unknown",0,"Summons",3],["Unknown",1,"Arrest",30],["Unknown",1,"None",112],["Unknown",1,"Summons",2],["White",0,"Arrest",281],["White",0,"None",433],["White",0,"Summons",5],["White",1,"Arrest",125],["White",1,"None",224],["White",1,"Summons",9]],"age_by_race":{"Black":{"20":528,"18":438,"25":428,"30":414,"17":352,"16":345,"19":340,"21":297,"22":295,"15":266,"23":250,"28":214,"40":196,"24":193,"26":190,"14":190,"35":187,"32":177,"29":174,"27":171,"31":159,"34":145,"33":127,"36":111,"37":107,"38":104,"50":98,"45":93,"39":85,"41":79,"13":77,"42":76,"43":73,"44":67,"46":59,"55":57,"60":54,"47":52,"52":51,"51":48,"54":48,"57":45,"56":43,"53":42,"48":39,"58":38,"49":37,"59":36,"62":33,"61":26,"63":24,"12":23,"65":16,"64":11,"67":9,"11":6,"66":5,"68":4,"70":4,"10":3,"71":2,"69":2,"74":2,"79":1,"77":1},"Hispanic":{"20":238,"25":227,"30":213,"18":206,"17":172,"19":171,"16":170,"22":158,"21":157,"23":124,"24":124,"15":122,"35":116,"40":112,"28":106,"27":102,"31":100,"26":98,"34":88,"29":87,"32":85,"33":75,"36":61,"38":61,"42":60,"39":59,"37":56,"45":54,"14":53,"50":46,"44":45,"43":42,"41":35,"53":32,"49":31,"46":31,"47":29,"48":28,"52":22,"55":21,"54":21,"57":20,"51":17,"56":15,"13":13,"60":13,"59":10,"58":10,"61":5,"64":5,"12":5,"65":5,"62":4,"67":4,"63":4,"73":3,"71":3,"68":3,"66":2,"70":2,"78":2,"11":2,"76":1,"10":1,"69":1},"White":{"30":59,"35":45,"32":35,"40":35,"17":33,"36":30,"25":29,"38":29,"33":28,"31":27,"20":26,"15":26,"29":24,"41":24,"22":24,"34":24,"18":23,"45":23,"50":23,"39":22,"27":22,"37":21,"28":19,"49":19,"21":19,"19":18,"51":17,"43":17,"16":17,"26":15,"42":15,"24":14,"46":14,"60":12,"55":12,"13":11,"23":11,"54":11,"53":10,"57":10,"58":9,"48":8,"14":7,"44":7,"47":6,"52":6,"12":6,"56":5,"59":5,"64":5,"74":5,"65":4,"61":3,"67":3,"72":2,"69":2,"68":2,"75":2,"11":2,"70":2,"62":1,"63":1,"71":1,"10":1},"Asian / Pacific Islander":{"30":16,"20":14,"18":13,"16":12,"27":11,"28":11,"17":10,"24":10,"14":10,"40":9,"33":8,"25":8,"22":8,"19":8,"42":7,"31":7,"38":7,"21":7,"26":7,"39":7,"36":7,"43":7,"50":6,"44":6,"37":6,"47":5,"45":5,"52":4,"32":4,"34":4,"15":4,"29":4,"55":4,"46":3,"41":3,"65":3,"13":3,"63":3,"57":3,"35":3,"56":3,"53":2,"54":2,"23":2,"66":2,"61":2,"49":2,"48":1,"51":1,"60":1,"58":1,"67":1,"73":1,"64":1,"74":1,"59":1},"Other":{"19":11,"22":8,"29":8,"30":8,"20":7,"18":7,"32":7,"40":6,"45":6,"42":5,"39":5,"23":5,"25":5,"34":5,"35":5,"16":5,"27":4,"15":4,"21":4,"26":4,"33":3,"28":3,"24":3,"14":3,"44":3,"37":3,"36":3,"31":2,"38":2,"41":2,"17":2,"79":2,"46":2,"58":1,"13":1,"51":1,"75":1,"55":1,"62":1,"60":1,"47":1,"61":1,"50":1,"43":1}}};
+</script>
+<script>
+/* ---------- helpers ---------- */
+const NS='http://www.w3.org/2000/svg';
+const fmt=n=>Number(n).toLocaleString('en-US');
+const P1=v=>v.toFixed(1)+'%';
+const ord=n=>n+(['th','st','nd','rd'][(n%100>>3^1&&n%10)||0]||'th');
+function el(tag,a,parent,text){const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);if(text!=null)e.textContent=text;if(parent)parent.appendChild(e);return e}
+function mk(id,W,H){const h=document.getElementById(id);h.innerHTML='';const s=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':h.dataset.label||''});s.style.width='100%';s.style.height='auto';h.appendChild(s);return s}
+const tip=document.getElementById('tip');
+function showTip(e,html){tip.innerHTML=html;tip.style.opacity=1;moveTip(e)}
+function moveTip(e){const w=tip.offsetWidth,h=tip.offsetHeight;let x=e.clientX+14,y=e.clientY+14;if(x+w>innerWidth-8)x=e.clientX-w-14;if(y+h>innerHeight-8)y=e.clientY-h-14;tip.style.left=Math.max(4,x)+'px';tip.style.top=Math.max(4,y)+'px'}
+function hideTip(){tip.style.opacity=0}
+function bind(n,html){n.addEventListener('pointerenter',e=>showTip(e,html));n.addEventListener('pointermove',moveTip);n.addEventListener('pointerleave',hideTip)}
+function table(id,head,rows){const host=document.getElementById(id);let d=host.nextElementSibling;while(d&&!d.classList.contains('tbl')&&d.classList.contains('legend-grad'))d=d.nextElementSibling;if(!d||!d.classList.contains('tbl')){d=document.createElement('details');d.className='tbl';(host.parentElement).appendChild(d)}
+  d.innerHTML='<summary>View data table</summary><div class="tw"><table><thead><tr>'+head.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</tbody></table></div>'}
+function legend(id,items){document.getElementById(id).innerHTML=items.map(i=>`<span><i style="background:${i.c}"></i>${i.n}</span>`).join('')}
+const hr=(x,y,w,h,r)=>{r=Math.min(r,w,h/2);return `M${x},${y}h${w-r}a${r},${r} 0 0 1 ${r},${r}v${h-2*r}a${r},${r} 0 0 1 -${r},${r}h-${w-r}z`};
+const vr=(x,y,w,h,r)=>{r=Math.min(r,h,w/2);return `M${x},${y+h}v${-(h-r)}a${r},${r} 0 0 1 ${r},${-r}h${w-2*r}a${r},${r} 0 0 1 ${r},${r}v${h-r}z`};
+const RACE=['Black','Hispanic','White','Asian / Pacific Islander','Other'];
+const RC={'Black':'var(--s1)','Hispanic':'var(--s2)','White':'var(--s3)','Asian / Pacific Islander':'var(--s4)','Other':'var(--s5)','Unknown':'var(--bench)'};
+const OUT={arrest:'var(--s7)',summons:'var(--s4)',none:'var(--bench)'};
+const RN=s=>({'Cpw':'CPW (weapon)','Cpsp':'CPSP'}[s]||s);
+const RL={'Asian / Pacific Islander':'Asian / Pac. Isl.'};
+const rl=r=>RL[r]||r;
+
+const aml=(labels,min=60)=>Math.min(230,Math.max(min,Math.round(Math.max(...labels.map(l=>String(l).length))*6.7+16)));
+/* ---------- chart primitives ---------- */
+function hbar(id,rows,o={}){
+  const W=560,rh=o.rh||28,ml=aml(rows.map(r=>r.l)),mr=70,H=rows.length*rh+8,f=o.f||fmt;
+  const s=mk(id,W,H),max=o.max||Math.max(...rows.map(r=>r.v));
+  rows.forEach((r,i)=>{const y=i*rh+4,w=Math.max(2,(W-ml-mr)*r.v/max);
+    el('text',{x:ml-8,y:y+rh/2+4,'text-anchor':'end',class:'lbl'},s,r.l);
+    const g=el('g',{},s);
+    el('rect',{x:ml,y,width:W-ml,height:rh,fill:'transparent'},g);
+    el('path',{d:hr(ml,y+5,w,rh-10,4),fill:r.c||o.color||'var(--s1)'},g);
+    el('text',{x:ml+w+6,y:y+rh/2+4,class:'val'},s,f(r.v));
+    bind(g,r.tip||`<b>${r.l}</b><br>${f(r.v)}`)});
+  table(id,o.head||['',o.unit||'Value'],rows.map(r=>[r.l,f(r.v)]))
+}
+function vbar(id,rows,o={}){
+  const W=560,H=o.h||220,ml=40,mr=8,mt=14,mb=30,f=o.f||fmt;
+  const s=mk(id,W,H),max=o.max||Math.max(...rows.map(r=>r.v)),ticks=o.ticks||4;
+  const nice=(()=>{const m=max*1.05,p=Math.pow(10,Math.floor(Math.log10(m)));const st=[1,2,2.5,5,10].map(k=>k*p).find(k=>m/k<=ticks)||p*10;return {st,top:Math.ceil(m/st)*st}})();
+  const iw=W-ml-mr,ih=H-mt-mb,n=rows.length,bw=iw/n,bar=Math.min(o.maxbar||40,bw*.72);
+  for(let t=0;t<=nice.top+1e-9;t+=nice.st){const y=mt+ih-ih*t/nice.top;el('line',{x1:ml,x2:W-mr,y1:y,y2:y,stroke:t?'var(--grid)':'var(--axis)'},s);el('text',{x:ml-6,y:y+4,'text-anchor':'end',class:'tick'},s,o.yf?o.yf(t):fmt(t))}
+  rows.forEach((r,i)=>{const x=ml+i*bw+(bw-bar)/2,h=Math.max(1,ih*r.v/nice.top),y=mt+ih-h;
+    const g=el('g',{},s);el('rect',{x:ml+i*bw,y:mt,width:bw,height:ih,fill:'transparent'},g);
+    el('path',{d:vr(x,y,bar,h,4),fill:r.c||o.color||'var(--s1)'},g);
+    if(!o.nolabel||(o.labelIdx&&o.labelIdx.includes(i)))el('text',{x:x+bar/2,y:y-4,'text-anchor':'middle',class:'tick',style:'fill:var(--ink)'},s,(o.vf||f)(r.v));
+    if(!o.xevery||i%o.xevery===0)el('text',{x:x+bar/2,y:H-10,'text-anchor':'middle',class:'tick'},s,r.l);
+    bind(g,r.tip||`<b>${r.l}</b><br>${f(r.v)}`)});
+  table(id,o.head||['',o.unit||'Value'],rows.map(r=>[r.l,f(r.v)]))
+}
+function gbar(id,rows,series,o={}){ // rows:[{l,vals:[..]}]
+  const W=560,ml=aml(rows.map(r=>r.l)),mr=56,bh=11,gap=2,pad=9,rh=series.length*(bh+gap)+pad,H=rows.length*rh+6,f=o.f||P1;
+  const s=mk(id,W,H),max=o.max||Math.max(...rows.flatMap(r=>r.vals));
+  rows.forEach((r,i)=>{const y0=i*rh+3;
+    el('text',{x:ml-8,y:y0+(series.length*(bh+gap))/2+3,'text-anchor':'end',class:'lbl'},s,r.l);
+    const g=el('g',{},s);el('rect',{x:ml,y:y0,width:W-ml,height:rh-pad/2,fill:'transparent'},g);
+    series.forEach((se,j)=>{const w=Math.max(2,(W-ml-mr)*r.vals[j]/max),y=y0+j*(bh+gap);
+      el('path',{d:hr(ml,y,w,bh,3),fill:se.c},g);
+      if(o.vals!==false)el('text',{x:ml+w+5,y:y+bh-1.5,class:'val',style:'font-size:12px'},s,f(r.vals[j]))});
+    bind(g,`<b>${r.l}</b>`+series.map((se,j)=>`<br>${se.n}: ${f(r.vals[j])}`).join(''))});
+  table(id,['',...series.map(x=>x.n)],rows.map(r=>[r.l,...r.vals.map(f)]))
+}
+function stack(id,rows,keys,o={}){ // rows:[{l,v:{k:pct}}]
+  const W=560,ml=aml(rows.map(r=>r.l)),rh=o.rh||26,H=rows.length*rh+6,s=mk(id,W,H),iw=W-ml-4;
+  rows.forEach((r,i)=>{const y=i*rh+3;let x=ml;const tot=keys.reduce((a,k)=>a+(r.v[k.k]||0),0)||100;
+    el('text',{x:ml-8,y:y+rh/2+3,'text-anchor':'end',class:'lbl'},s,r.l);
+    const g=el('g',{},s);
+    keys.forEach(k=>{const v=r.v[k.k]||0,w=iw*v/tot;if(w<=0)return;
+      const rect=el('rect',{x,y:y+2,width:Math.max(0,w),height:rh-6,fill:k.c,stroke:'var(--surface)','stroke-width':2,rx:3},g);
+      if(w>34)el('text',{x:x+w/2,y:y+rh/2+3,'text-anchor':'middle',class:'inlbl',style:k.dark?'fill:var(--on-yellow)':''},s,Math.round(v)+'%');
+      rect.addEventListener('pointerenter',e=>showTip(e,`<b>${r.l}</b><br>${k.n}: ${v.toFixed(1)}%`));rect.addEventListener('pointermove',moveTip);rect.addEventListener('pointerleave',hideTip);
+      x+=w});});
+  table(id,['',...keys.map(k=>k.n)],rows.map(r=>[r.l,...keys.map(k=>(r.v[k.k]||0).toFixed(1)+'%')]))
+}
+function lines(id,xs,series,o={}){
+  const W=560,H=o.h||240,ml=38,mr=o.mr||96,mt=12,mb=26,s=mk(id,W,H),iw=W-ml-mr,ih=H-mt-mb,ymax=o.ymax||100,ymin=0;
+  for(let t=0;t<=ymax;t+=o.step||20){const y=mt+ih-ih*(t-ymin)/(ymax-ymin);el('line',{x1:ml,x2:W-mr,y1:y,y2:y,stroke:t?'var(--grid)':'var(--axis)'},s);el('text',{x:ml-6,y:y+4,'text-anchor':'end',class:'tick'},s,t+'%')}
+  const X=i=>ml+iw*i/(xs.length-1),Y=v=>mt+ih-ih*(v-ymin)/(ymax-ymin);
+  xs.forEach((x,i)=>{if(i%(o.xevery||1)===0)el('text',{x:X(i),y:H-8,'text-anchor':'middle',class:'tick'},s,x)});
+  series.forEach(se=>{const pts=se.vals.map((v,i)=>v==null?null:[X(i),Y(v)]).filter(Boolean);
+    el('path',{d:'M'+pts.map(p=>p.join(',')).join('L'),fill:'none',stroke:se.c,'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'},s);
+    const last=pts[pts.length-1];el('circle',{cx:last[0],cy:last[1],r:4,fill:se.c,stroke:'var(--surface)','stroke-width':2},s);
+    if(!o.nolabel)el('text',{x:last[0]+9,y:last[1]+4,class:'lbl halo',style:'fill:var(--ink)'},s,se.n+' '+se.vals[se.vals.length-1].toFixed(1)+'%')});
+  const cross=el('line',{y1:mt,y2:mt+ih,stroke:'var(--axis)','stroke-width':1,opacity:0},s),dots=series.map(se=>el('circle',{r:4.5,fill:se.c,stroke:'var(--surface)','stroke-width':2,opacity:0},s));
+  const ov=el('rect',{x:ml,y:mt,width:iw,height:ih,fill:'transparent'},s);
+  ov.addEventListener('pointermove',e=>{const r=s.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width,i=Math.max(0,Math.min(xs.length-1,Math.round((px-ml)/iw*(xs.length-1))));
+    cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('opacity',1);
+    dots.forEach((d,j)=>{const v=series[j].vals[i];d.setAttribute('opacity',v==null?0:1);if(v!=null){d.setAttribute('cx',X(i));d.setAttribute('cy',Y(v))}});
+    showTip(e,`<b>${xs[i]}</b>`+series.map(se=>`<br>${se.n}: ${se.vals[i]==null?'–':se.vals[i].toFixed(1)+'%'}`).join(''))});
+  ov.addEventListener('pointerleave',()=>{cross.setAttribute('opacity',0);dots.forEach(d=>d.setAttribute('opacity',0));hideTip()});
+  table(id,['Year',...series.map(x=>x.n)],xs.map((x,i)=>[x,...series.map(se=>se.vals[i]==null?'–':se.vals[i].toFixed(1)+'%')]))
+}
+const seq=t=>`color-mix(in srgb, var(--seq-hi) ${Math.round(8+92*t)}%, var(--seq-lo))`;
+function heat(id,M,rowsL,colsL,o={}){
+  const W=560,ml=40,mt=18,cw=(W-ml-4)/M[0].length,ch=26,H=mt+M.length*ch+4,s=mk(id,W,H),max=Math.max(...M.flat());
+  const hl=h=>h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p';
+  for(let h=0;h<M[0].length;h+=3)el('text',{x:ml+h*cw+cw/2,y:mt-6,'text-anchor':'middle',class:'tick'},s,hl(h));
+  M.forEach((row,i)=>{el('text',{x:ml-6,y:mt+i*ch+ch/2+4,'text-anchor':'end',class:'lbl'},s,rowsL[i]);
+    row.forEach((v,j)=>{const r=el('rect',{x:ml+j*cw+1,y:mt+i*ch+1,width:cw-2,height:ch-2,rx:3,style:'fill:'+seq(v/max)},s);bind(r,`<b>${rowsL[i]} ${hl(j)}</b><br>${fmt(v)} stops`)})});
+  table(id,['Day',...Array.from({length:24},(_,h)=>hl(h))],M.map((r,i)=>[rowsL[i],...r]))
+}
+function dmap(id,m){
+  const c=m.cells,cell=m.cell,xs=c.map(a=>a[0]),ys=c.map(a=>a[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const W=560,k=W/(x1-x0+1),H=(y1-y0+1)*k,s=mk(id,W,H),max=Math.max(...c.map(a=>a[2]));
+  c.sort((a,b)=>a[2]-b[2]).forEach(([x,y,n])=>{const r=el('rect',{x:(x-x0)*k,y:(y1-y)*k,width:k+.4,height:k+.4,style:'fill:'+seq(Math.pow(n/max,.5))},s);bind(r,`<b>${n} stop${n>1?'s':''}</b> in this ~0.28-mile square`)});
+  const L=[['Bronx',1015000,252000],['Manhattan',990000,222000],['Brooklyn',995000,168000],['Queens',1045000,200000],['Staten Island',945000,148000]];
+  L.forEach(([t,X,Y])=>el('text',{x:(X/cell-x0)*k,y:(y1-Y/cell)*k,'text-anchor':'middle',class:'lbl halo',style:'font-weight:600;fill:var(--ink)'},s,t));
+  table(id,['Grid x','Grid y','Stops'],c.slice().sort((a,b)=>b[2]-a[2]).slice(0,30).map(a=>[a[0],a[1],a[2]]));
+  document.getElementById(id).nextElementSibling;
+}
+function scatter(id,pts,o={}){ // pts [code,n,arrest,weapon]
+  const W=560,H=280,ml=62,mr=12,mt=10,mb=36,s=mk(id,W,H),iw=W-ml-mr,ih=H-mt-mb,lx0=Math.log10(30),lx1=Math.log10(1400);
+  const X=n=>ml+iw*(Math.log10(n)-lx0)/(lx1-lx0),Y=v=>mt+ih-ih*v/80;
+  for(let t=0;t<=80;t+=20){el('line',{x1:ml,x2:W-mr,y1:Y(t),y2:Y(t),stroke:t?'var(--grid)':'var(--axis)'},s);el('text',{x:ml-6,y:Y(t)+4,'text-anchor':'end',class:'tick'},s,t+'%')}
+  [30,100,300,1000].forEach(t=>{el('text',{x:X(t),y:H-18,'text-anchor':'middle',class:'tick'},s,fmt(t))});
+  el('text',{x:ml+iw/2,y:H-3,'text-anchor':'middle',class:'tick'},s,'stops by command (log scale)');
+  el('text',{x:12,y:mt+ih/2,'text-anchor':'middle',class:'tick',transform:`rotate(-90 12 ${mt+ih/2})`},s,'arrest rate');
+  pts.forEach(p=>{const c=el('circle',{cx:X(p[1]),cy:Y(p[2]),r:5,fill:'var(--s1)','fill-opacity':.8,stroke:'var(--surface)','stroke-width':1.5},s);bind(c,`<b>Command ${p[0]}</b><br>${fmt(p[1])} stops<br>Arrest rate ${p[2].toFixed(1)}%<br>Weapon found ${p[3].toFixed(1)}%`)});
+  table(id,['Command','Stops','Arrest %','Weapon found %'],pts.slice().sort((a,b)=>b[1]-a[1]).map(p=>[p[0],fmt(p[1]),p[2].toFixed(1),p[3].toFixed(1)]))
+}
+
+
+/* ---------- advanced chart primitives ---------- */
+function squarify(items,x,y,w,h){
+  const total=items.reduce((a,i)=>a+i.v,0),out=[],scale=w*h/total;let rest=items.slice(),rx=x,ry=y,rw=w,rh=h;
+  const worst=(a,s)=>{const sum=a.reduce((p,q)=>p+q,0);return Math.max(s*s*Math.max(...a)/(sum*sum),sum*sum/(s*s*Math.min(...a)))};
+  while(rest.length){
+    const side=Math.min(rw,rh);let cur=[],i=0;
+    while(i<rest.length){const nx=[...cur,rest[i].v*scale];if(cur.length&&worst(nx,side)>worst(cur,side))break;cur=nx;i++}
+    const row=rest.slice(0,i);rest=rest.slice(i);const sum=cur.reduce((p,q)=>p+q,0);
+    if(rw>=rh){const cw=sum/rh;let yy=ry;row.forEach((it,k)=>{const hh=cur[k]/cw;out.push({...it,x:rx,y:yy,w:cw,h:hh});yy+=hh});rx+=cw;rw-=cw}
+    else{const rhh=sum/rw;let xx=rx;row.forEach((it,k)=>{const ww=cur[k]/rhh;out.push({...it,x:xx,y:ry,w:ww,h:rhh});xx+=ww});ry+=rhh;rh-=rhh}
+  }
+  return out}
+function treemap(id){
+  const W=560,H=330,s=mk(id,W,H),keys=[...RACE,'Unknown'],tot=D.N;
+  legend('lg1t',keys.filter(k=>D.race_sex[k]).map(k=>({c:RC[k],n:rl(k)})));
+  const items=keys.filter(k=>D.race_sex[k]).map(r=>({r,v:Object.values(D.race_sex[r]).reduce((a,b)=>a+b,0)})).sort((a,b)=>b.v-a.v);
+  const rows=[];
+  squarify(items,0,0,W,H).forEach(t=>{
+    const rs=D.race_sex[t.r],sx=['Male','Female','Unknown'].map(k=>({k,v:rs[k]||0})).filter(x=>x.v>0);
+    squarify(sx,t.x,t.y,t.w,t.h).forEach(u=>{
+      const rect=el('rect',{x:u.x,y:u.y,width:u.w,height:u.h,fill:RC[t.r],'fill-opacity':u.k==='Male'?1:u.k==='Female'?.5:.28,stroke:'var(--surface)','stroke-width':2},s);
+      bind(rect,`<b>${t.r} · ${u.k==='Unknown'?'sex not recorded':u.k}</b><br>${fmt(u.v)} stops<br>${(100*u.v/tot).toFixed(1)}% of all stops · ${(100*u.v/t.v).toFixed(1)}% of ${t.r} stops`);
+      rows.push([t.r,u.k,fmt(u.v),(100*u.v/tot).toFixed(1)+'%']);
+      if(u.k==='Female'&&u.w>70&&u.h>26)el('text',{x:u.x+8,y:u.y+19,class:'inlbl',style:t.r==='Asian / Pacific Islander'?'fill:var(--on-yellow)':'fill:var(--ink)'},s,'Women '+(100*u.v/t.v).toFixed(1)+'%')});
+    if(t.w>110&&t.h>56){const dk=t.r==='Asian / Pacific Islander';
+      el('text',{x:t.x+10,y:t.y+22,class:'inlbl',style:'font-size:15px;'+(dk?'fill:var(--on-yellow)':'')},s,rl(t.r));
+      el('text',{x:t.x+10,y:t.y+40,class:'inlbl',style:'font-weight:500;'+(dk?'fill:var(--on-yellow)':'')},s,fmt(t.v)+' stops · '+(100*t.v/tot).toFixed(1)+'%')}});
+  table(id,['Race','Gender','Stops','Share of all'],rows)
+}
+function calendar(id,daily){
+  const W=560,ml=30,mt=20,gap=2,cs=(W-ml-4)/53,H=mt+7*cs+4,s=mk(id,W,H);
+  const start=Date.UTC(2022,0,1),off=(new Date(start).getUTCDay()+6)%7,max=Math.max(...Object.values(daily)),rows=[];
+  ['Mon','Wed','Fri'].forEach((d,i)=>el('text',{x:ml-5,y:mt+i*2*cs+cs-2,'text-anchor':'end',class:'tick',style:'font-size:10px'},s,d));
+  for(let d=0;d<365;d++){
+    const dt=new Date(start+d*864e5),key=dt.toISOString().slice(0,10),n=daily[key]||0,wk=Math.floor((d+off)/7),dow=(dt.getUTCDay()+6)%7;
+    const r=el('rect',{x:ml+wk*cs,y:mt+dow*cs,width:cs-gap,height:cs-gap,rx:2,style:n?'fill:'+seq(n/max):'fill:var(--grid)'},s);
+    bind(r,`<b>${dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'})}</b><br>${n} stops`);rows.push([key,n]);
+    if(dt.getUTCDate()===1)el('text',{x:ml+wk*cs,y:mt-7,class:'tick'},s,dt.toLocaleString('en-US',{month:'short',timeZone:'UTC'}))}
+  table(id,['Date','Stops'],rows)
+}
+function clock(id,hours){
+  const W=560,H=370,cx=W/2,cy=H/2,r0=32,rm=140,max=Math.max(...hours)*1.05,s=mk(id,W,H);
+  const hl=h=>h===0?'12 am':h<12?h+' am':h===12?'12 pm':(h-12)+' pm';
+  const P=(r,deg)=>[cx+r*Math.sin(deg*Math.PI/180),cy-r*Math.cos(deg*Math.PI/180)];
+  [400,800,1200].forEach(v=>{const r=r0+(rm-r0)*v/max;el('circle',{cx,cy,r,fill:'none',stroke:'var(--grid)'},s);el('text',{x:cx+4,y:cy-r-3,class:'tick',style:'font-size:10px'},s,fmt(v))});
+  [0,3,6,9,12,15,18,21].forEach(h=>{const [x,y]=P(rm+20,h*15);el('text',{x,y:y+4,'text-anchor':'middle',class:'tick'},s,hl(h))});
+  hours.forEach((n,h)=>{const r1=r0+(rm-r0)*n/max,a0=h*15+1,a1=(h+1)*15-1,[x0,y0]=P(r0,a0),[x1,y1]=P(r1,a0),[x2,y2]=P(r1,a1),[x3,y3]=P(r0,a1);
+    const p=el('path',{d:`M${x0},${y0}L${x1},${y1}A${r1},${r1} 0 0 1 ${x2},${y2}L${x3},${y3}A${r0},${r0} 0 0 0 ${x0},${y0}Z`,style:'fill:'+seq(.25+.75*n/(max/1.05))},s);
+    bind(p,`<b>${hl(h)}–${hl((h+1)%24)}</b><br>${fmt(n)} stops`)});
+  el('text',{x:cx,y:cy+4,'text-anchor':'middle',class:'tick',style:'font-size:10px'},s,'stops');
+  table(id,['Hour','Stops'],hours.map((n,h)=>[hl(h),fmt(n)]))
+}
+function bubble(id){
+  const pts=D.reasons.filter(r=>r.n>=30).sort((a,b)=>b.n-a.n),W=560,H=350,ml=52,mr=16,mt=12,mb=42,iw=W-ml-mr,ih=H-mt-mb,s=mk(id,W,H);
+  const lx0=Math.log10(30),lx1=Math.log10(9000),X=n=>ml+iw*(Math.log10(n)-lx0)/(lx1-lx0),Y=v=>mt+ih-ih*v/80;
+  for(let t=0;t<=80;t+=20){el('line',{x1:ml,x2:W-mr,y1:Y(t),y2:Y(t),stroke:t?'var(--grid)':'var(--axis)'},s);el('text',{x:ml-6,y:Y(t)+4,'text-anchor':'end',class:'tick'},s,t+'%')}
+  [30,100,300,1000,3000].forEach(v=>el('text',{x:X(v),y:H-24,'text-anchor':'middle',class:'tick'},s,fmt(v)));
+  el('text',{x:ml+iw/2,y:H-6,'text-anchor':'middle',class:'tick'},s,'stops citing this reason (log scale)');
+  el('text',{x:12,y:mt+ih/2,'text-anchor':'middle',class:'tick',transform:`rotate(-90 12 ${mt+ih/2})`},s,'arrest rate');
+  const R_=w=>4+Math.sqrt(w)*2.6;
+  pts.forEach(p=>{const c=el('circle',{cx:X(p.n),cy:Y(p.arrest),r:R_(p.weapon),fill:'var(--s2)','fill-opacity':.62,stroke:'var(--surface)','stroke-width':1.5},s);
+    bind(c,`<b>${RN(p.reason)}</b><br>${fmt(p.n)} stops<br>Arrest rate ${p.arrest}%<br>Weapon found ${p.weapon}% · firearm ${p.firearm}%<br>No arrest or summons ${p.noaction}%`)});
+  pts.filter(p=>p.n>=1000).forEach(p=>{const x=X(p.n),r=R_(p.weapon),left=x>W*.8;el('text',{x:left?x-r-5:x+r+5,y:Y(p.arrest)+4,'text-anchor':left?'end':'start',class:'lbl halo',style:'fill:var(--ink);font-weight:600'},s,RN(p.reason))});
+  table(id,['Reason','Stops','Arrest %','Weapon found %','Firearm %'],pts.map(p=>[RN(p.reason),fmt(p.n),p.arrest,p.weapon,p.firearm]))
+}
+function sankey(id,cols,links){
+  const W=560,H=370,mt=6,gap=12,nw=14,ml=96,mr=124,s=mk(id,W,H),nodes={};
+  cols.forEach((c,ci)=>c.forEach(n=>nodes[n.id]={...n,col:ci,in:0,out:0}));
+  links.forEach(l=>{nodes[l.s].out+=l.v;nodes[l.t].in+=l.v});
+  Object.values(nodes).forEach(n=>n.v=Math.max(n.in,n.out));
+  const k=Math.min(...cols.map(c=>(H-mt-6-gap*(c.length-1))/c.reduce((a,n)=>a+nodes[n.id].v,0)));
+  cols.forEach((c,ci)=>{const tot=c.reduce((a,n)=>a+nodes[n.id].v*k,0)+gap*(c.length-1);let y=mt+(H-mt-6-tot)/2;
+    c.forEach(n=>{const nd=nodes[n.id];nd.x=ml+ci*(W-ml-mr-nw)/(cols.length-1);nd.y=y;nd.h=nd.v*k;nd.so=0;nd.to=0;y+=nd.h+gap})});
+  const L=links.map(l=>({...l}));
+  Object.values(nodes).forEach(nd=>L.filter(l=>l.s===nd.id).sort((a,b)=>nodes[a.t].y-nodes[b.t].y).forEach(l=>{l.sy=nd.y+nd.so;nd.so+=l.v*k}));
+  Object.values(nodes).forEach(nd=>L.filter(l=>l.t===nd.id).sort((a,b)=>nodes[a.s].y-nodes[b.s].y).forEach(l=>{l.ty=nd.y+nd.to;nd.to+=l.v*k}));
+  L.forEach(l=>{const sx=nodes[l.s].x+nw,tx=nodes[l.t].x,h=Math.max(.8,l.v*k),m=(sx+tx)/2;
+    const p=el('path',{d:`M${sx},${l.sy}C${m},${l.sy} ${m},${l.ty} ${tx},${l.ty}L${tx},${l.ty+h}C${m},${l.ty+h} ${m},${l.sy+h} ${sx},${l.sy+h}Z`,fill:l.c,'fill-opacity':.45},s);
+    p.addEventListener('pointerenter',e=>{p.setAttribute('fill-opacity',.8);showTip(e,l.tip)});p.addEventListener('pointermove',moveTip);p.addEventListener('pointerleave',()=>{p.setAttribute('fill-opacity',.45);hideTip()})});
+  Object.values(nodes).forEach(nd=>{const r=el('rect',{x:nd.x,y:nd.y,width:nw,height:Math.max(2,nd.h),rx:3,fill:nd.c},s);bind(r,`<b>${nd.label}</b><br>${fmt(nd.v)} stops (${(100*nd.v/D.N).toFixed(1)}% of all)`);
+    const last=nd.col===cols.length-1,first=nd.col===0;
+    el('text',{x:first?nd.x-6:nd.x+nw+6,y:nd.y+nd.h/2+4,'text-anchor':first?'end':'start',class:'lbl'+(first||last?'':' halo'),style:'fill:var(--ink)'},s,nd.label)});
+  table(id,['From','To','Stops'],links.map(l=>[nodes[l.s].label,nodes[l.t].label,fmt(l.v)]))
+}
+function ridge(id){
+  const races=RACE,ages=[];for(let a=10;a<=70;a++)ages.push(a);
+  const W=560,ml=100,mr=14,mt=10,mb=26,rh=56,amp=100,H=mt+(races.length-1)*rh+amp+mb,s=mk(id,W,H),iw=W-ml-mr,X=a=>ml+iw*(a-10)/60;
+  const med=h=>{const e=Object.entries(h).map(([a,n])=>[+a,n]).sort((x,y)=>x[0]-y[0]),tot=e.reduce((a,x)=>a+x[1],0);let c=0;for(const [a,n] of e){c+=n;if(c>=tot/2)return a}};
+  const raw=races.map(r=>{const h=D.age_by_race[r],tot=Object.values(h).reduce((a,b)=>a+b,0);return ages.map(a=>(h[a]||0)/tot*100)});
+  const dens=raw.map(row=>row.map((v,i)=>{const w=[row[i-1],v,row[i+1]].filter(x=>x!=null);return w.reduce((a,b)=>a+b,0)/w.length}));
+  const max=Math.max(...dens.flat());
+  for(let a=10;a<=70;a+=10){el('line',{x1:X(a),x2:X(a),y1:mt,y2:H-mb,stroke:'var(--grid)'},s);el('text',{x:X(a),y:H-8,'text-anchor':'middle',class:'tick'},s,a)}
+  const rows=[],meds=[];
+  races.forEach((r,ri)=>{const base=mt+amp+ri*rh,Y=v=>base-amp*v/max;
+    const pts=dens[ri].map((v,i)=>[X(ages[i]),Y(v)]);
+    const path=el('path',{d:`M${X(10)},${base}L`+pts.map(p=>p.join(',')).join('L')+`L${X(70)},${base}Z`,fill:RC[r],'fill-opacity':.8,stroke:'var(--surface)','stroke-width':1.5},s);
+    el('line',{x1:ml,x2:W-mr,y1:base,y2:base,stroke:'var(--axis)'},s);
+    const m=med(D.age_by_race[r]);
+    el('text',{x:ml-8,y:base-4,'text-anchor':'end',class:'lbl',style:'fill:var(--ink);font-weight:600'},s,rl(r));
+    el('text',{x:ml-8,y:base+9,'text-anchor':'end',class:'tick'},s,'median '+m);
+    meds.push([X(m),base]);
+    path.addEventListener('pointermove',e=>{const b=s.getBoundingClientRect(),px=(e.clientX-b.left)*W/b.width,a=Math.max(10,Math.min(70,Math.round(10+(px-ml)/iw*60)));
+      showTip(e,`<b>${r}, age ${a}</b><br>${raw[ri][a-10].toFixed(1)}% of ${r} stops<br>(${fmt(D.age_by_race[r][a]||0)} stops)`)});
+    path.addEventListener('pointerleave',hideTip)});
+  meds.forEach(([x,y])=>el('circle',{cx:x,cy:y,r:4,fill:'var(--ink)',stroke:'var(--surface)','stroke-width':1.5},s));
+  table(id,['Age',...races.map(rl)],ages.map(a=>[a,...races.map(r=>fmt(D.age_by_race[r][a]||0))]))
+}
+
+/* ---------- Q1 ---------- */
+(()=>{
+  const rr=D.race.filter(r=>r.pop_share!=null);
+  legend('lg1',[{c:'var(--s1)',n:'Share of stops'},{c:'var(--bench)',n:'Share of NYC residents (2020 Census)'}]);
+  gbar('c1a',rr.map(r=>({l:rl(r.group),vals:[r.share,r.pop_share]})),[{n:'Share of stops',c:'var(--s1)'},{n:'Share of residents',c:'var(--bench)'}],{ml:112});
+  hbar('c1b',rr.map(r=>({l:rl(r.group),v:r.per1000,c:RC[r.group],tip:`<b>${r.group}</b><br>${fmt(r.n)} stops<br>${r.per1000.toFixed(2)} per 1,000 residents`})),{f:v=>v.toFixed(2),unit:'Stops per 1,000',ml:112});
+  treemap('c1t');
+})();
+/* ---------- Q2 ---------- */
+(()=>{
+  calendar('c2cal',D.daily);
+  vbar('c2b',D.weekday.map(d=>({l:d.d,v:d.n})),{unit:'Stops',maxbar:48});
+  clock('c2clk',D.hour);
+  heat('c2d',D.heat_wd_hour,['Mon','Tue','Wed','Thu','Fri','Sat','Sun']);
+})();
+/* ---------- Q3 ---------- */
+(()=>{
+  bubble('c3a');
+  legend('lg3b',[{c:'var(--s1)',n:'Share of all stops citing it'},{c:OUT.arrest,n:'Arrest rate when cited'}]);
+  gbar('c3b',D.stop_basis.map(r=>({l:r.reason,vals:[r.share,r.arrest]})),[{n:'Share of stops citing it',c:'var(--s1)'},{n:'Arrest rate when cited',c:OUT.arrest}],{max:60});
+  const K=[{k:'arrest',n:'Arrest',c:OUT.arrest},{k:'summons',n:'Summons',c:OUT.summons,dark:1},{k:'noaction',n:'No arrest or summons',c:OUT.none}];
+  legend('lg3',K.map(k=>({c:k.c,n:k.n})));
+  stack('c3c',D.reasons.slice(0,8).map(r=>({l:RN(r.reason),v:{arrest:r.arrest,summons:r.summons,noaction:r.noaction}})),K,{ml:120});
+  const io=D.initiation_outcomes;
+  hbar('c3d',['Radio Run','C/W on Scene','Self Initiated'].map(k=>({l:{'Radio Run':'Radio run','C/W on Scene':'Complainant at scene','Self Initiated':'Self-initiated'}[k],v:io[k].arrest,c:OUT.arrest,tip:`<b>${k}</b><br>${fmt(io[k].n)} stops<br>${io[k].arrest}% arrested`})),{f:P1,ml:150,unit:'Arrest rate'});
+})();
+/* ---------- Q4 ---------- */
+(()=>{
+  const K=[{k:'arrest',n:'Arrest',c:OUT.arrest},{k:'summons',n:'Summons',c:OUT.summons,dark:1},{k:'noaction',n:'No arrest or summons',c:OUT.none}];
+  legend('lg4',K.map(k=>({c:k.c,n:k.n})));
+  const g=[['All stops',D.overall],...RACE.map(r=>[rl(r),D.by_race[r]]),['Male',D.by_sex.Male],['Female',D.by_sex.Female]];
+  stack('c4a',g.map(([l,d])=>({l,v:{arrest:d.arrest,summons:d.summons,noaction:d.noaction}})),K,{ml:112});
+  legend('lg4b',[{c:'var(--s1)',n:'Frisked'},{c:'var(--s3)',n:'Searched'}]);
+  gbar('c4b',g.map(([l,d])=>({l,vals:[d.frisk,d.search]})),[{n:'Frisked',c:'var(--s1)'},{n:'Searched',c:'var(--s3)'}],{ml:112,max:100});
+  // Sankey: race -> frisked? -> outcome
+  const F=D.flows,sum=f=>F.filter(f).reduce((a,x)=>a+x[3],0);
+  const OL={Arrest:'Arrest','Summons':'Summons only','None':'No arrest or summons'},OC={Arrest:OUT.arrest,Summons:OUT.summons,None:OUT.none};
+  const races=[...RACE,'Unknown'].filter(r=>F.some(x=>x[0]===r));
+  const cols=[races.map(r=>({id:'r'+r,label:rl(r),c:RC[r]})),[{id:'f1',label:'Frisked',c:'var(--muted)'},{id:'f0',label:'Not frisked',c:'var(--muted)'}],['Arrest','Summons','None'].map(o=>({id:'o'+o,label:OL[o],c:OC[o]}))];
+  const links=[];
+  races.forEach(r=>[1,0].forEach(fr=>{const v=sum(x=>x[0]===r&&x[1]===fr);if(v>0){const tot=sum(x=>x[0]===r);links.push({s:'r'+r,t:'f'+fr,v,c:RC[r],tip:`<b>${r} → ${fr?'Frisked':'Not frisked'}</b><br>${fmt(v)} stops<br>${(100*v/tot).toFixed(1)}% of ${r} stops`})}}));
+  [1,0].forEach(fr=>['Arrest','Summons','None'].forEach(o=>{const v=sum(x=>x[1]===fr&&x[2]===o),tot=sum(x=>x[1]===fr);links.push({s:'f'+fr,t:'o'+o,v,c:OC[o],tip:`<b>${fr?'Frisked':'Not frisked'} → ${OL[o]}</b><br>${fmt(v)} stops<br>${(100*v/tot).toFixed(1)}% of ${fr?'frisked':'non-frisked'} stops`})}));
+  sankey('c4s',cols,links);
+})();
+/* ---------- Q5 ---------- */
+(()=>{
+  hbar('c5a',D.precincts.map(p=>({l:ord(p.precinct)+' Pct · '+p.boro,v:p.n,tip:`<b>${ord(p.precinct)} Precinct (${p.boro})</b><br>${fmt(p.n)} stops<br>${p.arrest}% arrested`})),{ml:150,unit:'Stops',rh:26});
+  const K=[{k:'black',n:'Black',c:RC.Black},{k:'hisp',n:'Hispanic',c:RC.Hispanic},{k:'white',n:'White',c:RC.White,},{k:'asian',n:'Asian / Pac. Isl.',c:RC['Asian / Pacific Islander'],dark:1},{k:'other',n:'Other / unknown',c:RC.Other}];
+  legend('lg5',K.map(k=>({c:k.c,n:k.n})));
+  stack('c5b',D.precincts.map(p=>({l:ord(p.precinct)+' Pct',v:p})),K,{ml:70,rh:26});
+  const b=D.boro.slice().sort((x,y)=>y.per1000-x.per1000);
+  hbar('c5c',b.map(x=>({l:x.boro,v:x.per1000,tip:`<b>${x.boro}</b><br>${fmt(x.n)} stops<br>${x.per1000} per 1,000 residents`})),{f:v=>v.toFixed(2),ml:100,unit:'Stops per 1,000'});
+  legend('lg5d',[{c:'var(--s1)',n:'Black share of stops'},{c:'var(--bench)',n:'Black share of residents'}]);
+  gbar('c5d',D.boro.map(x=>({l:x.boro,vals:[x.stop_black,x.pop_black]})),[{n:'Black share of stops',c:'var(--s1)'},{n:'Black share of residents',c:'var(--bench)'}],{ml:100,max:80});
+  dmap('c5e',D.map);
+})();
+/* ---------- Q6 ---------- */
+(()=>{
+  const F=D.finds,N=D.N,p=v=>100*v/N;
+  hbar('c6a',[{l:'Any weapon',v:p(F.weapon),c:'var(--s2)'},{l:'Firearm',v:p(F.firearm),c:'var(--s2)'},{l:'Knife / cutting tool',v:p(F.knife),c:'var(--s2)'},{l:'Other weapon',v:p(F.otherweapon),c:'var(--s2)'},{l:'Other contraband',v:p(F.contraband),c:'var(--s3)'},{l:'Weapon or contraband',v:p(F.anyfind),c:'var(--s1)'}],{f:P1,ml:150,unit:'Share of stops'});
+  hbar('c6b',RACE.map(r=>({l:rl(r),v:D.weapon_given_frisk_by_race[r],c:RC[r]})),{f:P1,ml:112,unit:'Weapon found | frisked'});
+  legend('lg6',[{c:'var(--s2)',n:'Any weapon'},{c:'var(--s1)',n:'Firearm'},{c:'var(--s3)',n:'Other contraband'}]);
+  gbar('c6c',D.reasons.slice(0,8).map(r=>({l:RN(r.reason),vals:[r.weapon,r.firearm,r.contraband]})),[{n:'Any weapon',c:'var(--s2)'},{n:'Firearm',c:'var(--s1)'},{n:'Other contraband',c:'var(--s3)'}],{ml:120});
+})();
+/* ---------- Q7 ---------- */
+(()=>{
+  const R=D.repeat;
+  hbar('c7a',RACE.map(r=>({l:rl(r),v:R.by_race[r],c:RC[r]})),{f:P1,ml:112,unit:'% matching another stop'});
+  hbar('c7b',Object.entries(R.size_dist).map(([k,v])=>({l:'Appears '+k+'×',v})),{ml:110,unit:'Descriptions'});
+})();
+/* ---------- Q8 ---------- */
+(()=>{
+  ridge('c8r');
+  legend('lg8b',[{c:'var(--s1)',n:'Frisked'},{c:'var(--s2)',n:'Weapon found'},{c:OUT.arrest,n:'Arrested'}]);
+  gbar('c8c',D.age_groups.map(a=>({l:a.group,vals:[a.frisk,a.weapon,a.arrest]})),[{n:'Frisked',c:'var(--s1)'},{n:'Weapon found',c:'var(--s2)'},{n:'Arrested',c:OUT.arrest}],{ml:60,max:80});
+  const order=D.age_reason_order,cols=['var(--s1)','var(--s2)','var(--s3)','var(--s4)','var(--s5)','var(--s6)','var(--bench)'];
+  const K=order.map((o,i)=>({k:o,n:o==='Cpw'?'CPW (weapon)':o,c:cols[i],dark:cols[i]==='var(--s4)'}));
+  legend('lg8',K.map(k=>({c:k.c,n:k.n})));
+  stack('c8b',D.age_groups.map(a=>({l:a.group,v:D.age_reason[a.group]})),K,{ml:60,rh:30});
+})();
+/* ---------- Q9 ---------- */
+(()=>{
+  hbar('c9a',D.commands.map(c=>({l:'Command '+c.code,v:c.n,tip:`<b>Command ${c.code}</b><br>${fmt(c.n)} stops<br>${c.arrest}% arrested · ${c.noaction}% no arrest or summons`})),{ml:110,unit:'Stops',rh:26});
+  legend('lg9b',[{c:OUT.arrest,n:'Arrest rate'},{c:'var(--s2)',n:'Weapon found'}]);
+  gbar('c9b',D.commands.map(c=>({l:'Command '+c.code,vals:[c.arrest,c.weapon]})),[{n:'Arrest rate',c:OUT.arrest},{n:'Weapon found',c:'var(--s2)'}],{ml:100,max:40});
+  scatter('c9c',D.command_scatter);
+})();
+/* ---------- Q10 ---------- */
+(()=>{
+  const yrs=[2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022];
+  const stops=[685724,532911,191851,45787,22565,12404,11629,11008,13459,9544,8947,15102];
+  const black=[53,55,56,53,54,52,57,57,59,56,60,D.race_nyclu_style.Black],lat=[34,32,29,27,29,29,31,31,29,30,27,D.race_nyclu_style.Hispanic],white=[9,10,11,12,11,10,8,10,9,9,8,D.race_nyclu_style.White];
+  const inn=[88,89,88,82,80,76,67,70,66,61,61,D.noaction_2022];
+  vbar('c10a',yrs.map((y,i)=>({l:String(y),v:stops[i],c:y===2022?'var(--s1)':'var(--bench)'})),{nolabel:true,labelIdx:[0,2,11],unit:'Stops',xevery:1,h:230,ticks:3});
+  const z=yrs.slice(5);
+  vbar('c10b',z.map((y,i)=>({l:String(y),v:stops[i+5],c:y===2022?'var(--s1)':'var(--bench)'})),{unit:'Stops',maxbar:46,h:230});
+  legend('lg10',[{c:RC.Black,n:'Black'},{c:RC.Hispanic,n:'Latinx / Hispanic'},{c:RC.White,n:'White'}]);
+  lines('c10c',yrs.map(String),[{n:'Black',c:RC.Black,vals:black},{n:'Latinx',c:RC.Hispanic,vals:lat},{n:'White',c:RC.White,vals:white}],{ymax:80,xevery:2,mr:80,nolabel:false});
+  lines('c10d',yrs.map(String),[{n:'No arrest/summons',c:OUT.arrest,vals:inn}],{ymax:100,xevery:2,mr:30,nolabel:true});
+  hbar('c10e',[{l:'2013',v:100*22952/191851},{l:'2021',v:100*3356/8947},{l:'2022',v:100*6908/15102,c:'var(--s1)'}].map(r=>({...r,c:r.c||'var(--bench)'})),{f:P1,ml:60,unit:'CPW share of stops',max:60});
+})();
+
+/* ---------- theme toggle ---------- */
+document.getElementById('theme').addEventListener('click',()=>{
+  const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme=dark?'light':'dark';
+});
+</script>
+</body>
+</html>
